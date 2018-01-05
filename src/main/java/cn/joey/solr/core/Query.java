@@ -158,6 +158,7 @@ public class Query<T> {
 			Condition condition = fq.get(i);
 			String name = condition.getName();	
 			String[] values = condition.getValues();
+			fqStr.append(LEFT_PARENTHESIS);
 			if(values.length == 1) {//精准查询
 				fqStr.append(getFuzzyStr(name, values[0], condition.isFuzzy()));	
 			}else {//多值AND查询
@@ -166,6 +167,7 @@ public class Query<T> {
 			if(i < fq.size() - 1) {
 				fqStr.append(SPACE + (condition.isOr() ? OR : AND) + SPACE);
 			}			
+			fqStr.append(RIGHT_PARENTHESIS);
 		}
 		return fqStr.toString();
 	}

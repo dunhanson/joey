@@ -32,7 +32,7 @@ System.out.println(pagination);
 ## 查询结果
 ``` text
 q : (company_name:"厦门")
-fq : province:"福建"
+fq : (province:"福建")
 sort : id DESC
 Pagination [pageNo=1, pageSize=30, startNum=0, totalSize=557]
 ```
