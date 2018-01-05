@@ -6,26 +6,27 @@ joey-solr是一个简化solr查询的java扩展库。
 
 ## 查询例子
 ``` java
-//q
+//查询条件
 List<Condition> q = new ArrayList<>();
 q.add(new Condition("company_name", new String[] {"厦门"}));
-//fq
+//过滤条件
 List<Condition> fq = new ArrayList<>();
 fq.add(new Condition("province", new String[] {"福建"}));
-//sort
+//排序条件
 List<Sort> sort = new ArrayList<>();
 sort.add(new Sort("id"));
 //分页对象
 Pagination pagination = new Pagination(1, 30);
 //查询对象
-Query<Contact> query = new Query<Contact>(q, fq, sort, pagination, Contact.class);
+Query<Contact> query = new Query<Contact>(q, fq, sort, pagination, Contact.class);	
+//打印参数
 System.out.println("q : " + query.getQStr());
 System.out.println("fq : " + query.getFQStr());
-System.out.println("sort : " + query.getSortStr());			
+System.out.println("sort : " + query.getSortStr());				
 //查询
 query.search();
-List<Contact> list = query.getResult();
-System.out.println("size：" + list.size());
+//分页信息
+System.out.println(pagination);
 ```
 
 ## 查询结果
@@ -33,7 +34,7 @@ System.out.println("size：" + list.size());
 q : (company_name:"厦门")
 fq : province:"福建"
 sort : id DESC
-size：30
+Pagination [pageNo=1, pageSize=30, startNum=0, totalSize=557]
 ```
 
 ## ini配置文件
