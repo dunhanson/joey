@@ -44,9 +44,8 @@ Pagination [pageNo=1, pageSize=30, startNum=0, totalSize=557]
 #NickName（多个,号分隔）
 nickname=contact
 
-###############
-##contact配置##
-##############
+#contact配置#
+
 #Solr请求基础地址
 contact.baseSolrUrl=http://192.168.2.65:8081/solr/contact
 #查询结果需要转换的实体类
