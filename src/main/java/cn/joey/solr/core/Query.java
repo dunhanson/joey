@@ -19,6 +19,7 @@ import org.apache.solr.common.StringUtils;
 import cn.joey.solr.entity.Condition;
 import cn.joey.solr.entity.Pagination;
 import cn.joey.solr.entity.Sort;
+import cn.joey.utils.HttpUtils;
 
 /**
  * Solr通用查询对象
@@ -49,6 +50,9 @@ public class Query<T> {
 	private final String HIGHTLIGHT_SIMPLEPRE = "highlightSimplePre";
 	private final String HIGHLIGHT_SIMPLEPOST = "highlightSimplePost";
 	private final String CONFIG_FILENAME = "joey-solr.ini";
+	private final static String IMPORT_ENTITY = "importEntity";
+	private final static String FULL_IMPORT = "full-import";
+	private final static String DELTA_IMPORT = "delta-import";	
 	private QueryResponse response;
 	private Properties properties;
 	private List<Condition> q;
@@ -64,6 +68,14 @@ public class Query<T> {
 	private boolean upperConvertEnable = false;
 	private List<T> result;
 	
+	/**
+	 * 构造方法
+	 * @param q 查询条件
+	 * @param fq 过滤条件
+	 * @param sort 排序条件
+	 * @param pagination 分页对象
+	 * @param clazz Class对象
+	 */
 	public Query(List<Condition> q, List<Condition> fq, List<Sort> sort, Pagination pagination, Class<T> clazz) {
 		this.q = q;
 		this.fq = fq;
@@ -71,7 +83,23 @@ public class Query<T> {
 		this.pagination = pagination;	
 		this.clazz = clazz;
 	}
+
+	/**
+	 * 构造方法
+	 * @param clazz Class对象
+	 */
+	public Query(Class<T> clazz) {
+		this.clazz = clazz;
+		init();
+	}
 	
+	/**
+	 * 构造方法
+	 */
+	public Query() {
+
+	}
+
 	/**
 	 * 初始化参数
 	 */
@@ -91,6 +119,7 @@ public class Query<T> {
 	 * 全文检索
 	 */
 	public void search() {
+		long starttime = System.currentTimeMillis();
 		HttpSolrClient client = null;
 		try {
 			init();
@@ -109,6 +138,8 @@ public class Query<T> {
 				query.setHighlightSimplePost(highlightSimplePost);						
 			}		
 			response = client.query(query);
+			long endtime = System.currentTimeMillis();
+			System.out.println("耗时：" + (endtime - starttime) + "毫秒");
 			result = toEntities();
 		} catch (Exception e) {
 			throw new RuntimeException(e);
@@ -393,10 +424,64 @@ public class Query<T> {
 		return properties.getProperty(key);
 	}
 	
+	/**
+	 * 获取属性值（默认值）
+	 * @param key
+	 * @param defaultValue
+	 * @return
+	 */
 	public String getProperty(String key, String defaultValue) {
 		key = getNickname(properties, clazz) + DOT + key;
 		return properties.getProperty(key, defaultValue);
 	}
+	
+	/**
+	 * 全量更新索引
+	 * @param clazz
+	 * @return
+	 */
+	public String fullImport() {	
+		String result = "";
+		try {
+			String baseSolrUrl = getProperty(BASESOLR_URL);
+			String entity = getProperty(IMPORT_ENTITY);
+			result = dataImport(baseSolrUrl, entity, FULL_IMPORT);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+		return result;
+	}
+	
+	/**
+	 * 增量更新索引
+	 * @param clazz
+	 * @return
+	 */
+	public String deltaImport() {	
+		String result = "";
+		try {
+			String baseSolrUrl = getProperty(BASESOLR_URL);
+			String entity = getProperty(IMPORT_ENTITY);
+			result = dataImport(baseSolrUrl, entity, DELTA_IMPORT);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+		return result;
+	}	
+	
+	/**
+	 * 更新索引
+	 * @param <T>
+	 */
+	public String dataImport(String baseSolrUrl, String entity, String importType) {
+		String result = "";
+		try {
+			result = HttpUtils.httpPost(baseSolrUrl + "/dataimport", "entity=" + entity + "&command=" + importType);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+		return result;
+	}	
 		
 	/**
 	 * 关闭HttpSolrClient资源

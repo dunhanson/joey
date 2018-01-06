@@ -39,19 +39,21 @@ Pagination [pageNo=1, pageSize=30, startNum=0, totalSize=557]
 
 ## ini配置文件
 ``` ini
-#joey-Solr配置信息
+
+#joey-Solr
 
 #NickName（多个,号分隔）
 nickname=contact
 
-#contact配置#
-
+#contact
 #Solr请求基础地址
-contact.baseSolrUrl=http://192.168.2.65:8081/solr/contact
+contact.baseSolrUrl=http://192.168.2.125:8983/solr/contact
 #查询结果需要转换的实体类
 contact.classpath=cn.joey.test.Contact
 #启用大写转换（例：Java对象属性userName，solr字段user_name）
 contact.upperConvertEnable=true
+#数据导入实体名称
+contact.importEntity=c_contact_new
 #启用高亮
 contact.highlightEnable=true
 #高亮字段
@@ -60,6 +62,7 @@ contact.highlightFieldName=company_name
 contact.highlightSimplePre=<font style=\"color:red\">
 #高亮样式后缀
 contact.highlightSimplePost=</font>
+
 ```
 
 ## pom.xml
@@ -74,6 +77,12 @@ contact.highlightSimplePost=</font>
   <artifactId>log4j-slf4j-impl</artifactId>
   <version>2.10.0</version>
 </dependency>	
+<dependency>
+  <groupId>javax.servlet</groupId>
+  <artifactId>javax.servlet-api</artifactId>
+  <version>3.1.0</version>
+  <scope>provided</scope>
+</dependency> 	
 ```
 
 ## jar包
