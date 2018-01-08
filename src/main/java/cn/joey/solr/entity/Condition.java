@@ -20,6 +20,13 @@ public class Condition {
 		this.name = name;
 		this.values = values;
 	}
+	
+	public Condition(String name, String[] values, boolean or) {
+		super();
+		this.name = name;
+		this.values = values;
+		this.or = or;
+	}
 
 	public Condition(String name, String[] values, boolean fuzzy, boolean or) {
 		this.name = name;
