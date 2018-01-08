@@ -88,6 +88,7 @@ contact.highlightSimplePost=</font>
 ## jar包
 [joey-solr-1.0.0.jar](http://dunhanson.oss-cn-shenzhen.aliyuncs.com/file/joey-solr-1.0.0.jar)
 
+[joey-solr-1.0.0-jdk7.jar](http://dunhanson.oss-cn-shenzhen.aliyuncs.com/file/joey-solr-1.0.0-jdk7.jar)
 
 
 
