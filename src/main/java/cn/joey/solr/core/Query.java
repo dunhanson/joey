@@ -195,10 +195,10 @@ public class Query<T> {
 			}else {//多值AND查询
 				fqStr.append(getTOStr(name, values));	
 			}
+			fqStr.append(RIGHT_PARENTHESIS);			
 			if(i < fq.size() - 1) {
 				fqStr.append(SPACE + (condition.isOr() ? OR : AND) + SPACE);
 			}			
-			fqStr.append(RIGHT_PARENTHESIS);
 		}
 		return fqStr.toString();
 	}
