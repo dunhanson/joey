@@ -284,10 +284,11 @@ public class Query<T> {
 				//高亮字段
 				if(highlightEnable && highlightFieldName.equalsIgnoreCase(name)) {
 					String highlightFieldValue = getHighlightingFieldValue(document);
-					setValue(field, highlightFieldValue, entity);
-				} else {//普通字段
-					setValue(field, value, entity);	
+					if(StringUtils.isEmpty(highlightFieldValue) == false) {
+						value = highlightFieldValue;
+					}
 				}
+				setValue(field, value, entity);	
 			}			
 		} catch (Exception e) {
 			throw new RuntimeException(e);
