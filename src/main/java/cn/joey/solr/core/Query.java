@@ -421,7 +421,11 @@ public class Query<T> {
 	 */
 	public String getProperty(String key) {
 		key = getNickname(properties, clazz) + DOT + key;
-		return properties.getProperty(key);
+		String value = properties.getProperty(key);
+		if(value == null) {
+			value = "";
+		}
+		return value;
 	}
 	
 	/**
