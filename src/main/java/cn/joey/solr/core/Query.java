@@ -4,13 +4,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.impl.CloudSolrClient;
@@ -92,14 +90,14 @@ public class Query<T> {
 		this.pagination = pagination;	
 		this.clazz = clazz;
 	}
-
+	
 	/**
 	 * 构造方法
 	 * @param clazz Class对象
 	 */
-	public Query(Class<T> clazz) {
+	public Query(Pagination pagination, Class<T> clazz) {
 		this.clazz = clazz;
-	}
+	}	
 	
 	/**
 	 * 初始化参数
@@ -360,7 +358,7 @@ public class Query<T> {
 				field.set(entity, Float.parseFloat(value.toString()));
 			} else if (clazz == Boolean.class || clazz == boolean.class) {
 				field.set(entity, Boolean.parseBoolean(value.toString()));
-			} else if (clazz == Date.class) {
+			} else {
 				field.set(entity, value);
 			}
 		} catch (Exception e) {

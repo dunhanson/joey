@@ -2,16 +2,11 @@ package cn.joey.test;
 
 import java.util.List;
 import cn.joey.solr.core.Query;
+import cn.joey.solr.entity.Pagination;
 
 public class ExclusiveTest {
 	public static void main(String[] args) {
-		/*
-		List<Condition> q = new ArrayList<>();
-		List<Condition> fq = new ArrayList<>();
-		List<Sort> sort = new ArrayList<>();
-		Pagination pagination = new Pagination(0, 30);
-		*/
-		Query<ExclusiveProject> query = new Query<ExclusiveProject>(ExclusiveProject.class);
+		Query<ExclusiveProject> query = new Query<ExclusiveProject>(new Pagination(0, 30), ExclusiveProject.class);
 		query.search();
 		List<ExclusiveProject> list = query.getResult();
 		for (ExclusiveProject exclusiveProject : list) {
