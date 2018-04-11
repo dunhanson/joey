@@ -89,14 +89,26 @@ public class Query<T> {
 		this.sort = sort;
 		this.pagination = pagination;	
 		this.clazz = clazz;
+		init();
 	}
 	
 	/**
 	 * 构造方法
 	 * @param clazz Class对象
 	 */
-	public Query(Pagination pagination, Class<T> clazz) {
+	public Query(Class<T> clazz) {
 		this.clazz = clazz;
+		init();
+	}		
+	
+	/**
+	 * 构造方法
+	 * @param clazz Class对象
+	 */
+	public Query(Pagination pagination, Class<T> clazz) {
+		this.pagination = pagination;
+		this.clazz = clazz;
+		init();
 	}	
 	
 	/**
@@ -116,7 +128,7 @@ public class Query<T> {
 			zkHost = getProperty(ZKHOST);
 		}
 	}
-
+	
 	/**
 	 * 全文检索
 	 */
@@ -124,7 +136,6 @@ public class Query<T> {
 		long starttime = System.currentTimeMillis();
 		SolrClient client = null;
 		try {
-			init();
 			if(cluster) {
 				CloudSolrClient cloudSolrClient = new CloudSolrClient.Builder().withZkHost(zkHost).build();
 				cloudSolrClient.setZkClientTimeout(60000);
