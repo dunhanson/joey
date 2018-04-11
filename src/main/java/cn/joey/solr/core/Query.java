@@ -10,7 +10,10 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrQuery;
+import org.apache.solr.client.solrj.impl.CloudSolrClient;
 import org.apache.solr.client.solrj.impl.HttpSolrClient;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrDocument;
@@ -39,7 +42,7 @@ public class Query<T> {
 	private final String DESC = "DESC";										
 	private final String LEFT_PARENTHESIS = "(";
 	private final String RIGHT_PARENTHESIS = ")";
-	private final String NICKNAME = "nickname";
+	private final String COLLECTION = "collection";
 	private final String CLASSPATH = "classpath";
 	private final String BASESOLR_URL = "baseSolrUrl";
 	private final String ID = "id";
@@ -49,24 +52,30 @@ public class Query<T> {
 	private final String HIGHLIGHT_FIELDNAME = "highlightFieldName";
 	private final String HIGHTLIGHT_SIMPLEPRE = "highlightSimplePre";
 	private final String HIGHLIGHT_SIMPLEPOST = "highlightSimplePost";
+	private final String CLUSTER = "cluster";
+	private final String ZKHOST = "zkHost";
 	private final String CONFIG_FILENAME = "joey-solr.ini";
 	private final static String IMPORT_ENTITY = "importEntity";
 	private final static String FULL_IMPORT = "full-import";
 	private final static String DELTA_IMPORT = "delta-import";	
 	private QueryResponse response;
 	private Properties properties;
-	private List<Condition> q;
-	private List<Condition> fq;
-	private List<Sort> sort;
-	private Pagination pagination;
+	private List<Condition> q = new ArrayList<>();
+	private List<Condition> fq = new ArrayList<>();
+	private List<Sort> sort = new ArrayList<>();
+	private Pagination pagination = new Pagination(0, 30);
 	private Class<T> clazz;
 	private String baseSolrUrl;
-	private boolean highlightEnable = false;
+	private boolean highlightEnable;
 	private String highlightFieldName;
 	private String highlightSimplePre;
 	private String highlightSimplePost;
-	private boolean upperConvertEnable = false;
-	private List<T> result;
+	private boolean upperConvertEnable;
+	private boolean cluster;
+	private String collection;
+	private String zkHost;
+	private boolean showTime;
+	private List<T> result = new ArrayList<>();
 	
 	/**
 	 * 构造方法
@@ -90,28 +99,23 @@ public class Query<T> {
 	 */
 	public Query(Class<T> clazz) {
 		this.clazz = clazz;
-		init();
 	}
 	
-	/**
-	 * 构造方法
-	 */
-	public Query() {
-
-	}
-
 	/**
 	 * 初始化参数
 	 */
 	private void init() {
 		loadConfiguration();
 		if(properties != null) {
+			collection = getCollection(properties, clazz);
 			baseSolrUrl = getProperty(BASESOLR_URL);
-			highlightEnable = getProperty(HIGHLIGHT_ENABLE).equals(String.valueOf(true)) ? true : false;
-			upperConvertEnable = getProperty(UPPERCONVERT_ENABLE).equals(String.valueOf(true)) ? true : false;
+			highlightEnable = getProperty(HIGHLIGHT_ENABLE).equals("true") ? true : false;
+			upperConvertEnable = getProperty(UPPERCONVERT_ENABLE).equals("true") ? true : false;
 			highlightFieldName = getProperty(HIGHLIGHT_FIELDNAME, "");
 			highlightSimplePre = getProperty(HIGHTLIGHT_SIMPLEPRE, "");
-			highlightSimplePost = getProperty(HIGHLIGHT_SIMPLEPOST, "");			
+			highlightSimplePost = getProperty(HIGHLIGHT_SIMPLEPOST, "");	
+			cluster = getProperty(CLUSTER, "false").equals("true") ? true : false;	
+			zkHost = getProperty(ZKHOST);
 		}
 	}
 
@@ -120,11 +124,17 @@ public class Query<T> {
 	 */
 	public void search() {
 		long starttime = System.currentTimeMillis();
-		HttpSolrClient client = null;
+		SolrClient client = null;
 		try {
 			init();
-			//client = new HttpSolrClient(baseSolrUrl);
-			client = new HttpSolrClient.Builder(baseSolrUrl).build();
+			if(cluster) {
+				CloudSolrClient cloudSolrClient = new CloudSolrClient.Builder().withZkHost(zkHost).build();
+				cloudSolrClient.setZkClientTimeout(60000);
+				cloudSolrClient.setDefaultCollection(collection);
+				client = cloudSolrClient;
+			} else {
+				client = new HttpSolrClient.Builder(baseSolrUrl).build();
+			}
 			SolrQuery query = new SolrQuery();
 			query.set("q", getQStr());
 			query.set("fq", getFQStr());
@@ -139,7 +149,9 @@ public class Query<T> {
 			}		
 			response = client.query(query);
 			long endtime = System.currentTimeMillis();
-			System.out.println("耗时：" + (endtime - starttime) + "毫秒");
+			if(showTime) {
+				System.out.println("耗时：" + (endtime - starttime) + "毫秒");	
+			}
 			result = toEntities();
 		} catch (Exception e) {
 			throw new RuntimeException(e);
@@ -382,13 +394,13 @@ public class Query<T> {
 	 * @param clazz
 	 * @return
 	 */
-	public String getNickname(Properties properties, Class<T> clazz) {
-		String[] nicknameArr = properties.getProperty(NICKNAME).split(",");
-		for (String nickname : nicknameArr) {	//遍历nickname
-			String key = nickname + DOT + CLASSPATH;
+	public String getCollection(Properties properties, Class<T> clazz) {
+		String[] collectionArr = properties.getProperty(COLLECTION).split(",");
+		for (String collection : collectionArr) {	//遍历nickname
+			String key = collection + DOT + CLASSPATH;
 			String classpath = properties.getProperty(key);			
 			if(classpath.equals(clazz.getCanonicalName())) {
-				return nickname;
+				return collection;
 			}
 		}
 		return null;		
@@ -421,7 +433,7 @@ public class Query<T> {
 	 * @return
 	 */
 	public String getProperty(String key) {
-		key = getNickname(properties, clazz) + DOT + key;
+		key = collection + DOT + key;
 		String value = properties.getProperty(key);
 		if(value == null) {
 			value = "";
@@ -436,7 +448,7 @@ public class Query<T> {
 	 * @return
 	 */
 	public String getProperty(String key, String defaultValue) {
-		key = getNickname(properties, clazz) + DOT + key;
+		key = collection + DOT + key;
 		return properties.getProperty(key, defaultValue);
 	}
 	
@@ -492,7 +504,7 @@ public class Query<T> {
 	 * 关闭HttpSolrClient资源
 	 * @param client
 	 */
-	public void close(HttpSolrClient client) {
+	public void close(SolrClient client) {
 		try {
 			if(client != null){
 				client.close();				
