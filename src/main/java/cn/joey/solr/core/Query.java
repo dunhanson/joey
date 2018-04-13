@@ -264,7 +264,8 @@ public class Query<T> {
 	 * @return 查询字符串
 	 */
 	public String getFuzzyStr(String name, String value, boolean fuzzy) {
-		if(fuzzy) {
+		if(fuzzy && !StringUtils.isEmpty(value)) {
+			value = STAR + value + STAR;
 			return name + COLON + value;
 		}
 		return name + COLON + QUOTE + value + QUOTE;
