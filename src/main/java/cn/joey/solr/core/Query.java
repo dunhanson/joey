@@ -4,6 +4,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -74,6 +75,7 @@ public class Query<T> {
 	private String zkHost;
 	private boolean showTime;
 	private List<T> result = new ArrayList<>();
+	private Map<String, String> notHighlightValue = new HashMap<>();
 	
 	/**
 	 * 构造方法
@@ -110,24 +112,6 @@ public class Query<T> {
 		this.clazz = clazz;
 		init();
 	}	
-	
-	/**
-	 * 初始化参数
-	 */
-	private void init() {
-		loadConfiguration();
-		if(properties != null) {
-			collection = getCollection(properties, clazz);
-			baseSolrUrl = getProperty(BASESOLR_URL);
-			highlightEnable = getProperty(HIGHLIGHT_ENABLE).equals("true") ? true : false;
-			upperConvertEnable = getProperty(UPPERCONVERT_ENABLE).equals("true") ? true : false;
-			highlightFieldName = getProperty(HIGHLIGHT_FIELDNAME, "");
-			highlightSimplePre = getProperty(HIGHTLIGHT_SIMPLEPRE, "");
-			highlightSimplePost = getProperty(HIGHLIGHT_SIMPLEPOST, "");	
-			cluster = getProperty(CLUSTER, "false").equals("true") ? true : false;	
-			zkHost = getProperty(ZKHOST);
-		}
-	}
 	
 	/**
 	 * 全文检索
@@ -257,212 +241,6 @@ public class Query<T> {
 	}
 	
 	/**
-	 * 获取模糊查询字符串
-	 * @param name 字段名
-	 * @param value 字段值
-	 * @param fuzzy 模糊查询？
-	 * @return 查询字符串
-	 */
-	public String getFuzzyStr(String name, String value, boolean fuzzy) {
-		if(fuzzy && !StringUtils.isEmpty(value)) {
-			value = STAR + value + STAR;
-			return name + COLON + value;
-		}
-		return name + COLON + QUOTE + value + QUOTE;
-	}
-	
-	/**
-	 * 转换成实体对象集合
-	 * @return 实体对象集合
-	 */
-	public List<T> toEntities(){
-		List<T> entitys = new ArrayList<>();
-		SolrDocumentList documentList = response.getResults();
-		pagination.setTotalSize(documentList.getNumFound());
-		for (SolrDocument document : documentList) {
-			entitys.add(toEntity(document));
-		}
-		return entitys;
-	}	
-	
-	/**
-	 * SolrDocument转实体对象
-	 * @param document SolrDocument对象
-	 * @return 实体对象
-	 */
-	public T toEntity(SolrDocument document) {
-		T entity;
-		try {
-			entity = clazz.newInstance();
-			Field[] fields = clazz.getDeclaredFields();
-			for (Field field : fields) {//遍历字段
-				field.setAccessible(true);
-				String name = field.getName();
-				Object value = document.get(name);
-				if(upperConvertEnable) {//启用大写转换（userName ---> user_name）
-					name = toLowerUnderline(field.getName());
-					value = document.get(name);
-				}
-				//高亮字段
-				if(highlightEnable && highlightFieldName.equalsIgnoreCase(name)) {
-					String highlightFieldValue = getHighlightingFieldValue(document);
-					if(StringUtils.isEmpty(highlightFieldValue) == false) {
-						value = highlightFieldValue;
-					}
-				}
-				setValue(field, value, entity);	
-			}			
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		} 
-		return entity;
-	}
-	
-	/**
-	 * 获取高亮字段值
-	 * @param document
-	 * @return
-	 */
-	public String getHighlightingFieldValue(SolrDocument document) {
-		Map<String, Map<String, List<String>>> highlighting = response.getHighlighting();
-		String idFileName = getProperty(ID_FIELDNAME);
-		if(StringUtils.isEmpty(idFileName)) {
-			idFileName = ID;
-		}
-		String id = (String) document.get(idFileName);
-		Map<String, List<String>> map = highlighting.get(id);
-		if(map != null){
-			List<String> list = map.get(getProperty(HIGHLIGHT_FIELDNAME));
-			if(list != null && list.size() > 0){
-				return list.get(0);
-			}
-		}
-		return null;
-	}
-	
-	/**
-	 * 反射属性赋值
-	 * @param field 字段
-	 * @param value 字段值
-	 * @param entity 实体对象
-	 */
-	public void setValue(Field field, Object value, T entity) {
-		try {
-			if(value == null) {
-				return;
-			}
-			Class<?> clazz = field.getType();
-			if(clazz == String.class) {
-				field.set(entity, String.valueOf(value));
-			} else if (clazz == Character.class || clazz == char.class) {
-				field.set(entity, (char)value);
-			}  else if (clazz == Long.class || clazz == long.class) {
-				field.set(entity, Long.parseLong(value.toString()));
-			} else if (clazz == Integer.class || clazz == int.class) {
-				field.set(entity, Integer.parseInt(value.toString()));
-			} else if (clazz == Short.class || clazz == short.class) {
-				field.set(entity, Short.parseShort(value.toString()));
-			} else if (clazz == Byte.class || clazz == byte.class) {
-				field.set(entity, Byte.parseByte(value.toString()));
-			} else if (clazz == Double.class || clazz == double.class) {
-				field.set(entity, Double.parseDouble(value.toString()));
-			} else if (clazz == Float.class || clazz == Float.class) {
-				field.set(entity, Float.parseFloat(value.toString()));
-			} else if (clazz == Boolean.class || clazz == boolean.class) {
-				field.set(entity, Boolean.parseBoolean(value.toString()));
-			} else {
-				field.set(entity, value);
-			}
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
-	
-	/**
-	 * 驼峰转小写下划线
-	 * @param str
-	 * @return
-	 */
-	public String toLowerUnderline(String str) {
-		if(StringUtils.isEmpty(str)) {
-			return "";
-		}
-		Pattern pattern = Pattern.compile("[A-Z]");
-		Matcher matcher = pattern.matcher(str);
-		int index = 0;
-		while(matcher.find()) {
-			String findStr = matcher.group(index);
-			str = str.replace(findStr, "_" + findStr);
-			index ++;
-		}		
-		return str.toLowerCase();
-	}	
-	
-	/**
-	 * 获取nickname
-	 * @param properties
-	 * @param clazz
-	 * @return
-	 */
-	public String getCollection(Properties properties, Class<T> clazz) {
-		String[] collectionArr = properties.getProperty(COLLECTION).split(",");
-		for (String collection : collectionArr) {	//遍历nickname
-			String key = collection + DOT + CLASSPATH;
-			String classpath = properties.getProperty(key);			
-			if(classpath.equals(clazz.getCanonicalName())) {
-				return collection;
-			}
-		}
-		return null;		
-	}	
-	
-	/**
-	 * 读取配置文件
-	 * @param <T>
-	 * @return
-	 */
-	public void loadConfiguration(){
-		InputStream in = null;
-		try {
-			in = Thread.currentThread().getContextClassLoader().getResourceAsStream(CONFIG_FILENAME);
-			if(in != null) {
-				properties = new Properties();		
-				properties.load(new InputStreamReader(in, "UTF-8"));			
-			}
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		} finally {
-			close(in);
-		}
-	}
-	
-	/**
-	 * 获取属性值
-	 * @param nickname 
-	 * @param name
-	 * @return
-	 */
-	public String getProperty(String key) {
-		key = collection + DOT + key;
-		String value = properties.getProperty(key);
-		if(value == null) {
-			value = "";
-		}
-		return value;
-	}
-	
-	/**
-	 * 获取属性值（默认值）
-	 * @param key
-	 * @param defaultValue
-	 * @return
-	 */
-	public String getProperty(String key, String defaultValue) {
-		key = collection + DOT + key;
-		return properties.getProperty(key, defaultValue);
-	}
-	
-	/**
 	 * 全量更新索引
 	 * @param clazz
 	 * @return
@@ -508,13 +286,249 @@ public class Query<T> {
 			throw new RuntimeException(e);
 		}
 		return result;
+	}		
+	
+	/**
+	 * 初始化参数
+	 */
+	private void init() {
+		loadConfiguration();
+		if(properties != null) {
+			collection = getCollection(properties, clazz);
+			baseSolrUrl = getProperty(BASESOLR_URL);
+			highlightEnable = getProperty(HIGHLIGHT_ENABLE).equals("true") ? true : false;
+			upperConvertEnable = getProperty(UPPERCONVERT_ENABLE).equals("true") ? true : false;
+			highlightFieldName = getProperty(HIGHLIGHT_FIELDNAME, "");
+			highlightSimplePre = getProperty(HIGHTLIGHT_SIMPLEPRE, "");
+			highlightSimplePost = getProperty(HIGHLIGHT_SIMPLEPOST, "");	
+			cluster = getProperty(CLUSTER, "false").equals("true") ? true : false;	
+			zkHost = getProperty(ZKHOST);
+		}
 	}	
+		
+	/**
+	 * 获取模糊查询字符串
+	 * @param name 字段名
+	 * @param value 字段值
+	 * @param fuzzy 模糊查询？
+	 * @return 查询字符串
+	 */
+	private String getFuzzyStr(String name, String value, boolean fuzzy) {
+		if(fuzzy && !StringUtils.isEmpty(value)) {
+			value = STAR + value + STAR;
+			return name + COLON + value;
+		}
+		return name + COLON + QUOTE + value + QUOTE;
+	}
+	
+	/**
+	 * 转换成实体对象集合
+	 * @return 实体对象集合
+	 */
+	private List<T> toEntities(){
+		List<T> entitys = new ArrayList<>();
+		SolrDocumentList documentList = response.getResults();
+		pagination.setTotalSize(documentList.getNumFound());
+		for (SolrDocument document : documentList) {
+			entitys.add(toEntity(document));
+		}
+		return entitys;
+	}	
+	
+	/**
+	 * SolrDocument转实体对象
+	 * @param document SolrDocument对象
+	 * @return 实体对象
+	 */
+	private T toEntity(SolrDocument document) {
+		T entity;
+		try {
+			entity = clazz.newInstance();
+			Field[] fields = clazz.getDeclaredFields();
+			for (Field field : fields) {//遍历字段
+				field.setAccessible(true);
+				String name = field.getName();
+				Object value = document.get(name);
+				if(upperConvertEnable) {//启用大写转换（userName ---> user_name）
+					name = toLowerUnderline(field.getName());
+					value = document.get(name);
+				}
+				//高亮字段
+				if(highlightEnable && highlightFieldName.equalsIgnoreCase(name)) {
+					String highlightFieldValue = getHighlightingFieldValue(document);
+					if(StringUtils.isEmpty(highlightFieldValue) == false) {
+						//获取正常字段
+						notHighlightValue.put((String) document.get(getIdFileName()), (String)value);
+						//设置高亮字段
+						value = highlightFieldValue;
+					}
+				}
+				setValue(field, value, entity);	
+			}			
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		} 
+		return entity;
+	}
+	
+	/**
+	 * 获取高亮字段值
+	 * @param document
+	 * @return
+	 */
+	private String getHighlightingFieldValue(SolrDocument document) {
+		Map<String, Map<String, List<String>>> highlighting = response.getHighlighting();
+		String idFileName = getIdFileName();
+		String id = (String) document.get(idFileName);
+		Map<String, List<String>> map = highlighting.get(id);
+		if(map != null){
+			List<String> list = map.get(getProperty(HIGHLIGHT_FIELDNAME));
+			if(list != null && list.size() > 0){
+				return list.get(0);
+			}
+		}
+		return null;
+	}
+	
+	/**
+	 * 获取ID字段名
+	 * @return
+	 */
+	private String getIdFileName() {
+		String idFileName = getProperty(ID_FIELDNAME);
+		if(StringUtils.isEmpty(idFileName)) {
+			idFileName = ID;
+		}
+		return idFileName;
+	}
+	
+	/**
+	 * 反射属性赋值
+	 * @param field 字段
+	 * @param value 字段值
+	 * @param entity 实体对象
+	 */
+	private void setValue(Field field, Object value, T entity) {
+		try {
+			if(value == null) {
+				return;
+			}
+			Class<?> clazz = field.getType();
+			if(clazz == String.class) {
+				field.set(entity, String.valueOf(value));
+			} else if (clazz == Character.class || clazz == char.class) {
+				field.set(entity, (char)value);
+			}  else if (clazz == Long.class || clazz == long.class) {
+				field.set(entity, Long.parseLong(value.toString()));
+			} else if (clazz == Integer.class || clazz == int.class) {
+				field.set(entity, Integer.parseInt(value.toString()));
+			} else if (clazz == Short.class || clazz == short.class) {
+				field.set(entity, Short.parseShort(value.toString()));
+			} else if (clazz == Byte.class || clazz == byte.class) {
+				field.set(entity, Byte.parseByte(value.toString()));
+			} else if (clazz == Double.class || clazz == double.class) {
+				field.set(entity, Double.parseDouble(value.toString()));
+			} else if (clazz == Float.class || clazz == Float.class) {
+				field.set(entity, Float.parseFloat(value.toString()));
+			} else if (clazz == Boolean.class || clazz == boolean.class) {
+				field.set(entity, Boolean.parseBoolean(value.toString()));
+			} else {
+				field.set(entity, value);
+			}
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+	
+	/**
+	 * 驼峰转小写下划线
+	 * @param str
+	 * @return
+	 */
+	private String toLowerUnderline(String str) {
+		if(StringUtils.isEmpty(str)) {
+			return "";
+		}
+		Pattern pattern = Pattern.compile("[A-Z]");
+		Matcher matcher = pattern.matcher(str);
+		int index = 0;
+		while(matcher.find()) {
+			String findStr = matcher.group(index);
+			str = str.replace(findStr, "_" + findStr);
+			index ++;
+		}		
+		return str.toLowerCase();
+	}	
+	
+	/**
+	 * 获取nickname
+	 * @param properties
+	 * @param clazz
+	 * @return
+	 */
+	private String getCollection(Properties properties, Class<T> clazz) {
+		String[] collectionArr = properties.getProperty(COLLECTION).split(",");
+		for (String collection : collectionArr) {	//遍历nickname
+			String key = collection + DOT + CLASSPATH;
+			String classpath = properties.getProperty(key);			
+			if(classpath.equals(clazz.getCanonicalName())) {
+				return collection;
+			}
+		}
+		return null;		
+	}	
+	
+	/**
+	 * 读取配置文件
+	 * @param <T>
+	 * @return
+	 */
+	private void loadConfiguration(){
+		InputStream in = null;
+		try {
+			in = Thread.currentThread().getContextClassLoader().getResourceAsStream(CONFIG_FILENAME);
+			if(in != null) {
+				properties = new Properties();		
+				properties.load(new InputStreamReader(in, "UTF-8"));			
+			}
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		} finally {
+			close(in);
+		}
+	}
+	
+	/**
+	 * 获取属性值
+	 * @param nickname 
+	 * @param name
+	 * @return
+	 */
+	private String getProperty(String key) {
+		key = collection + DOT + key;
+		String value = properties.getProperty(key);
+		if(value == null) {
+			value = "";
+		}
+		return value;
+	}
+	
+	/**
+	 * 获取属性值（默认值）
+	 * @param key
+	 * @param defaultValue
+	 * @return
+	 */
+	private String getProperty(String key, String defaultValue) {
+		key = collection + DOT + key;
+		return properties.getProperty(key, defaultValue);
+	}
 		
 	/**
 	 * 关闭HttpSolrClient资源
 	 * @param client
 	 */
-	public void close(SolrClient client) {
+	private void close(SolrClient client) {
 		try {
 			if(client != null){
 				client.close();				
@@ -528,7 +542,7 @@ public class Query<T> {
 	 * 关闭InputStream资源
 	 * @param in
 	 */
-	public void close(InputStream in) {
+	private void close(InputStream in) {
 		try {
 			if(in != null){
 				in.close();				
@@ -622,8 +636,7 @@ public class Query<T> {
 		return result;
 	}
 
-	public void setResult(List<T> result) {
-		this.result = result;
+	public Map<String, String> getNotHighlightValue() {
+		return notHighlightValue;
 	}
-
 }

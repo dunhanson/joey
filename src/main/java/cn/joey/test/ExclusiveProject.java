@@ -1,7 +1,5 @@
 package cn.joey.test;
 
-import java.util.Date;
-
 public class ExclusiveProject {
 	private String id;
 	//项目编号
@@ -14,7 +12,7 @@ public class ExclusiveProject {
 	private String province;
 	private String city;
 	//业主类型
-	private String ownersNature;
+	private String ownerType;
 	//项目类型
 	private String pType;
 	//项目阶段
@@ -24,7 +22,7 @@ public class ExclusiveProject {
 	//装修类别
 	private String decorateSituation;
 	//更新时间
-	private Date updateDate;
+	private String updateDate;
 	
 	public ExclusiveProject() {
 		
@@ -78,12 +76,12 @@ public class ExclusiveProject {
 		this.city = city;
 	}
 
-	public String getOwnersNature() {
-		return ownersNature;
+	public String getOwnerType() {
+		return ownerType;
 	}
 
-	public void setOwnersNature(String ownersNature) {
-		this.ownersNature = ownersNature;
+	public void setOwnerType(String ownerType) {
+		this.ownerType = ownerType;
 	}
 
 	public String getpType() {
@@ -118,18 +116,18 @@ public class ExclusiveProject {
 		this.decorateSituation = decorateSituation;
 	}
 
-	public Date getUpdateDate() {
+	public String getUpdateDate() {
 		return updateDate;
 	}
 
-	public void setUpdateDate(Date updateDate) {
+	public void setUpdateDate(String updateDate) {
 		this.updateDate = updateDate;
 	}
 
 	@Override
 	public String toString() {
 		return "ExclusiveProject [id=" + id + ", xmCode=" + xmCode + ", xmName=" + xmName + ", version=" + version
-				+ ", province=" + province + ", city=" + city + ", ownersNature=" + ownersNature + ", pType=" + pType
+				+ ", province=" + province + ", city=" + city + ", ownerType=" + ownerType + ", pType=" + pType
 				+ ", projectPhase=" + projectPhase + ", projectSize=" + projectSize + ", decorateSituation="
 				+ decorateSituation + ", updateDate=" + updateDate + "]";
 	}
