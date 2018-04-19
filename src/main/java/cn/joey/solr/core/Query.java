@@ -194,15 +194,19 @@ public class Query<T> {
 			Condition condition = fq.get(i);
 			String name = condition.getName();	
 			String[] values = condition.getValues();
+			boolean fuzzy = condition.isFuzzy();
+			boolean or = condition.isOr();
+			boolean innerFuzzy = condition.isInnerFuzzy();
+			boolean InnerOr = condition.isInnerOr();
 			fqStr.append(LEFT_PARENTHESIS);
 			if(values.length == 1) {//精准查询
-				fqStr.append(getFuzzyStr(name, values[0], condition.isFuzzy()));	
-			}else {//多值AND查询
-				fqStr.append(getTOStr(name, values));	
+				fqStr.append(getFuzzyStr(name, values[0], fuzzy));	
+			}else {
+				fqStr.append(getInnerStr(name, values, innerFuzzy, InnerOr));
 			}
 			fqStr.append(RIGHT_PARENTHESIS);			
 			if(i < fq.size() - 1) {
-				fqStr.append(SPACE + (condition.isOr() ? OR : AND) + SPACE);
+				fqStr.append(SPACE + (or ? OR : AND) + SPACE);
 			}			
 		}
 		return fqStr.toString();
@@ -230,7 +234,7 @@ public class Query<T> {
 	 * @param values 字段值
 	 * @return 查询字符串
 	 */
-	public String getTOStr(String name, String[] values) {
+	public String getTOStr(String name, String[] values, boolean innerFuzzy, boolean InnerOr) {
 		StringBuffer str = new StringBuffer();
 		str.append(name + COLON + "[");
 		str.append(QUOTE + values[0] + QUOTE);
@@ -239,6 +243,38 @@ public class Query<T> {
 		str.append("]");
 		return str.toString();
 	}
+
+	/**
+	 * 获取OR查询字符串
+	 * @param name
+	 * @param values
+	 * @return
+	 */
+	private String getInnerStr(String name, String[] values, boolean innerFuzzy, boolean innerOr) {
+		String logic = innerOr ? OR : AND;
+		StringBuffer str = new StringBuffer();
+		for(int i = 0; i < values.length; i++) {
+			str.append(getFuzzyStr(name, values[i], innerFuzzy));
+			str.append(SPACE + logic + SPACE);
+		}
+		str = str.delete(str.lastIndexOf(logic) - 1, str.length());
+		return str.toString();
+	}
+	
+	/**
+	 * 获取模糊查询字符串
+	 * @param name 字段名
+	 * @param value 字段值
+	 * @param fuzzy 模糊查询？
+	 * @return 查询字符串
+	 */
+	private String getFuzzyStr(String name, String value, boolean fuzzy) {
+		if(fuzzy && !StringUtils.isEmpty(value)) {
+			value = STAR + value + STAR;
+			return name + COLON + value;
+		}
+		return name + COLON + QUOTE + value + QUOTE;
+	}	
 	
 	/**
 	 * 全量更新索引
@@ -305,21 +341,6 @@ public class Query<T> {
 			zkHost = getProperty(ZKHOST);
 		}
 	}	
-		
-	/**
-	 * 获取模糊查询字符串
-	 * @param name 字段名
-	 * @param value 字段值
-	 * @param fuzzy 模糊查询？
-	 * @return 查询字符串
-	 */
-	private String getFuzzyStr(String name, String value, boolean fuzzy) {
-		if(fuzzy && !StringUtils.isEmpty(value)) {
-			value = STAR + value + STAR;
-			return name + COLON + value;
-		}
-		return name + COLON + QUOTE + value + QUOTE;
-	}
 	
 	/**
 	 * 转换成实体对象集合
@@ -356,9 +377,11 @@ public class Query<T> {
 				//高亮字段
 				if(highlightEnable && highlightFieldName.equalsIgnoreCase(name)) {
 					String highlightFieldValue = getHighlightingFieldValue(document);
-					if(StringUtils.isEmpty(highlightFieldValue) == false) {
+					if(value != null) {
 						//获取正常字段
-						notHighlightValue.put((String) document.get(getIdFileName()), (String)value);
+						notHighlightValue.put((String) document.get(getIdFileName()), (String)value);					
+					}
+					if(StringUtils.isEmpty(highlightFieldValue) == false) {
 						//设置高亮字段
 						value = highlightFieldValue;
 					}
@@ -455,7 +478,7 @@ public class Query<T> {
 		while(matcher.find()) {
 			String findStr = matcher.group(index);
 			str = str.replace(findStr, "_" + findStr);
-			index ++;
+			//index ++;
 		}		
 		return str.toLowerCase();
 	}	

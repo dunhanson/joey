@@ -6,23 +6,23 @@ package cn.joey.solr.entity;
  * @since 2017-12-27
  */
 public class Condition {
-	private String name;					//字段名称
-	private String[] values;				//字段指
-	private boolean fuzzy	;			//模糊查询
-	private boolean or;					//并且
+	private String name;        //字段名称
+	private String[] values;    //字段指
+	private boolean fuzzy;      //模糊查询
+	private boolean or;         //并且
+	private boolean innerOr;    //多值并且
+	private boolean innerFuzzy; //多值模糊
 	
 	public Condition() {
 		
 	}
 
 	public Condition(String name, String[] values) {
-		super();
 		this.name = name;
 		this.values = values;
 	}
 	
 	public Condition(String name, String[] values, boolean or) {
-		super();
 		this.name = name;
 		this.values = values;
 		this.or = or;
@@ -65,6 +65,22 @@ public class Condition {
 
 	public void setOr(boolean or) {
 		this.or = or;
+	}
+
+	public boolean isInnerOr() {
+		return innerOr;
+	}
+
+	public void setInnerOr(boolean innerOr) {
+		this.innerOr = innerOr;
+	}
+
+	public boolean isInnerFuzzy() {
+		return innerFuzzy;
+	}
+
+	public void setInnerFuzzy(boolean innerFuzzy) {
+		this.innerFuzzy = innerFuzzy;
 	}
 
 

@@ -9,16 +9,14 @@ import cn.joey.solr.entity.Pagination;
 public class ExclusiveTest {
 	public static void main(String[] args) {
 		Pagination pagination = new Pagination(0, 30);
-		List<Condition> q = new ArrayList<>();
-		q.add(new Condition("xm_name", new String[] {"飞机"}, true, true));
+		List<Condition> fq = new ArrayList<>();
+		fq.add(new Condition("owner_type", new String[] {"外资"}));
+		fq.add(new Condition("project_size", new String[] {"大型","普通"}, true, true));
 		Query<ExclusiveProject> query = new Query<ExclusiveProject>(ExclusiveProject.class);
 		query.setPagination(pagination);
-		query.setQ(q);
+		query.setFq(fq);
 		query.search();
-		List<ExclusiveProject> list = query.getResult();
-		for (ExclusiveProject exclusiveProject : list) {
-			System.out.println(exclusiveProject);
-		}
-		System.out.println(query.getNotHighlightValue());
+		System.out.println(query.getFQStr());
+		System.out.println(pagination);
 	}
 }

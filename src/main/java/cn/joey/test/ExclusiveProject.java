@@ -15,6 +15,8 @@ public class ExclusiveProject {
 	private String ownerType;
 	//项目类型
 	private String pType;
+	//项目子类型
+	private String pTypeSub;
 	//项目阶段
 	private String projectPhase;
 	//项目规模
@@ -123,13 +125,22 @@ public class ExclusiveProject {
 	public void setUpdateDate(String updateDate) {
 		this.updateDate = updateDate;
 	}
+	
+
+	public String getpTypeSub() {
+		return pTypeSub;
+	}
+
+	public void setpTypeSub(String pTypeSub) {
+		this.pTypeSub = pTypeSub;
+	}
 
 	@Override
 	public String toString() {
 		return "ExclusiveProject [id=" + id + ", xmCode=" + xmCode + ", xmName=" + xmName + ", version=" + version
 				+ ", province=" + province + ", city=" + city + ", ownerType=" + ownerType + ", pType=" + pType
-				+ ", projectPhase=" + projectPhase + ", projectSize=" + projectSize + ", decorateSituation="
-				+ decorateSituation + ", updateDate=" + updateDate + "]";
+				+ ", pTypeSub=" + pTypeSub + ", projectPhase=" + projectPhase + ", projectSize=" + projectSize
+				+ ", decorateSituation=" + decorateSituation + ", updateDate=" + updateDate + "]";
 	}
 
 }
