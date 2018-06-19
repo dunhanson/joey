@@ -13,6 +13,7 @@ public class Condition {
 	private boolean range;		//范围查询
 	private boolean innerOr;    //多值并且
 	private boolean innerFuzzy; //多值模糊
+	//内部类，查询类型
 	public enum Type {
 		FUZZY, OR, RANGE, INNER_OR, INNER_FUZZY
 	}

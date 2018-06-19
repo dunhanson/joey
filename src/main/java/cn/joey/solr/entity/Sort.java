@@ -6,7 +6,7 @@ package cn.joey.solr.entity;
  * @since 2017-12-27
  */
 public class Sort {
-	private String name;			//字段名称
+	private String name;    //字段名称
 	private boolean ascend;	//升序规则
 	
 	public Sort() {
