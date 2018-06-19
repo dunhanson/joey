@@ -41,6 +41,8 @@ public class Start {
 		List<Condition> q = new ArrayList<>();
 		//过滤条件
 		List<Condition> fq = new ArrayList<>();
+		//fq.add(new Condition("page_time", new String[] {"2018-05-01 TO 2018-06-01"}, false, ));
+		fq.add(new Condition("page_time", new String[] {"2018-05-01", "2018-06-01"}, Condition.Type.RANGE, true));
 		//排序条件
 		List<Sort> sort = new ArrayList<>();
 		//分页对象

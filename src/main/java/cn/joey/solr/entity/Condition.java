@@ -10,8 +10,12 @@ public class Condition {
 	private String[] values;    //字段指
 	private boolean fuzzy;      //模糊查询
 	private boolean or;         //并且
+	private boolean range;		//范围查询
 	private boolean innerOr;    //多值并且
 	private boolean innerFuzzy; //多值模糊
+	public enum Type {
+		FUZZY, OR, RANGE, INNER_OR, INNER_FUZZY
+	}
 	
 	public Condition() {
 		
@@ -20,6 +24,28 @@ public class Condition {
 	public Condition(String name, String[] values) {
 		this.name = name;
 		this.values = values;
+	}
+	
+	public Condition(String name, String[] values, Type type, boolean bool) {
+		this.name = name;
+		this.values = values;
+		switch (type) {
+			case FUZZY:
+				this.fuzzy = bool;
+				break;
+			case OR:
+				this.or = bool;
+				break;
+			case RANGE:
+				this.range = bool;
+				break;
+			case INNER_OR:
+				this.innerOr = bool;
+				break;
+			case INNER_FUZZY:
+				this.innerFuzzy = bool;
+				break;		
+		}
 	}
 	
 	public Condition(String name, String[] values, boolean or) {
@@ -83,5 +109,12 @@ public class Condition {
 		this.innerFuzzy = innerFuzzy;
 	}
 
+	public boolean isRange() {
+		return range;
+	}
+
+	public void setRange(boolean range) {
+		this.range = range;
+	}
 
 }

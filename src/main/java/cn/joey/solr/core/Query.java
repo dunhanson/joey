@@ -4,6 +4,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,9 +39,13 @@ public class Query<T> {
 	private final String DOT = ".";
 	private final String TO = "TO";								
 	private final String ASC = "ASC";							
-	private final String DESC = "DESC";										
+	private final String DESC = "DESC";		
+	private final String TRUE = "true";
+	private final String FALSE = "false";
 	private final String LEFT_PARENTHESIS = "(";
 	private final String RIGHT_PARENTHESIS = ")";
+	private final String LEFT_BRACKET = "[";
+	private final String RIGHT_BRACKET = "]";
 	private final String COLLECTION = "collection";
 	private final String CLASSPATH = "classpath";
 	private final String BASESOLR_URL = "baseSolrUrl";
@@ -54,9 +59,11 @@ public class Query<T> {
 	private final String CLUSTER = "cluster";
 	private final String ZKHOST = "zkHost";
 	private final String CONFIG_FILENAME = "joey-solr.ini";
+	private final String SHOW_TIME = "showTime";
 	private final static String IMPORT_ENTITY = "importEntity";
 	private final static String FULL_IMPORT = "full-import";
 	private final static String DELTA_IMPORT = "delta-import";	
+	private final static String ZKCLIENT_TIMEOUT = "zkClientTimeout";	
 	private QueryResponse response;
 	private Properties properties;
 	private List<Condition> q = new ArrayList<>();
@@ -76,6 +83,7 @@ public class Query<T> {
 	private boolean showTime;
 	private List<T> result = new ArrayList<>();
 	private Map<String, String> notHighlightValue = new HashMap<>();
+	private int zkClientTimeout;
 	
 	/**
 	 * 构造方法
@@ -122,7 +130,7 @@ public class Query<T> {
 		try {
 			if(cluster) {
 				CloudSolrClient cloudSolrClient = new CloudSolrClient.Builder().withZkHost(zkHost).build();
-				cloudSolrClient.setZkClientTimeout(60000);
+				cloudSolrClient.setZkClientTimeout(zkClientTimeout);
 				cloudSolrClient.setDefaultCollection(collection);
 				client = cloudSolrClient;
 			} else {
@@ -143,7 +151,7 @@ public class Query<T> {
 			response = client.query(query);
 			long endtime = System.currentTimeMillis();
 			if(showTime) {
-				System.out.println("耗时：" + (endtime - starttime) + "毫秒");	
+				System.out.println(clazz.getSimpleName() + "查询耗时：" + (endtime - starttime) + "毫秒");	
 			}
 			result = toEntities();
 		} catch (Exception e) {
@@ -197,12 +205,15 @@ public class Query<T> {
 			boolean fuzzy = condition.isFuzzy();
 			boolean or = condition.isOr();
 			boolean innerFuzzy = condition.isInnerFuzzy();
-			boolean InnerOr = condition.isInnerOr();
+			boolean innerOr = condition.isInnerOr();
+			boolean isRange = condition.isRange();
 			fqStr.append(LEFT_PARENTHESIS);
 			if(values.length == 1) {//精准查询
 				fqStr.append(getFuzzyStr(name, values[0], fuzzy));	
-			}else {
-				fqStr.append(getInnerStr(name, values, innerFuzzy, InnerOr));
+			} else if(values.length == 2 && isRange) {
+				fqStr.append(getRangeStr(name, values));
+			} else {
+				fqStr.append(getInnerStr(name, values, innerFuzzy, innerOr));
 			}
 			fqStr.append(RIGHT_PARENTHESIS);			
 			if(i < fq.size() - 1) {
@@ -258,6 +269,24 @@ public class Query<T> {
 			str.append(SPACE + logic + SPACE);
 		}
 		str = str.delete(str.lastIndexOf(logic) - 1, str.length());
+		return str.toString();
+	}
+	
+	/**
+	 * 获取范围查询字符串
+	 * @param name
+	 * @param values
+	 * @return
+	 */
+	private String getRangeStr(String name, String[] values) {
+		StringBuffer str = new StringBuffer();
+		str.append(name);
+		str.append(COLON);
+		str.append(LEFT_BRACKET);
+		str.append(values[0]);
+		str.append(SPACE + TO + SPACE);
+		str.append(values[1]);
+		str.append(RIGHT_BRACKET);
 		return str.toString();
 	}
 	
@@ -332,13 +361,15 @@ public class Query<T> {
 		if(properties != null) {
 			collection = getCollection(properties, clazz);
 			baseSolrUrl = getProperty(BASESOLR_URL);
-			highlightEnable = getProperty(HIGHLIGHT_ENABLE).equals("true") ? true : false;
-			upperConvertEnable = getProperty(UPPERCONVERT_ENABLE).equals("true") ? true : false;
+			highlightEnable = getProperty(HIGHLIGHT_ENABLE).equals(TRUE) ? true : false;
+			upperConvertEnable = getProperty(UPPERCONVERT_ENABLE).equals(TRUE) ? true : false;
 			highlightFieldName = getProperty(HIGHLIGHT_FIELDNAME, "");
 			highlightSimplePre = getProperty(HIGHTLIGHT_SIMPLEPRE, "");
 			highlightSimplePost = getProperty(HIGHLIGHT_SIMPLEPOST, "");	
-			cluster = getProperty(CLUSTER, "false").equals("true") ? true : false;	
+			cluster = getProperty(CLUSTER, "false").equals(TRUE) ? true : false;	
 			zkHost = getProperty(ZKHOST);
+			showTime = getProperty(SHOW_TIME).equalsIgnoreCase(TRUE) ? true : false;
+			zkClientTimeout = Integer.parseInt(getProperty(ZKCLIENT_TIMEOUT, "10"));
 		}
 	}	
 	
@@ -433,7 +464,7 @@ public class Query<T> {
 	 */
 	private void setValue(Field field, Object value, T entity) {
 		try {
-			if(value == null) {
+			if(value == null || StringUtils.isEmpty((String) value)) {
 				return;
 			}
 			Class<?> clazz = field.getType();
@@ -455,6 +486,8 @@ public class Query<T> {
 				field.set(entity, Float.parseFloat(value.toString()));
 			} else if (clazz == Boolean.class || clazz == boolean.class) {
 				field.set(entity, Boolean.parseBoolean(value.toString()));
+			} else if (clazz == Date.class && !(value instanceof String)) {
+				field.set(entity, value);
 			} else {
 				field.set(entity, value);
 			}
@@ -662,4 +695,193 @@ public class Query<T> {
 	public Map<String, String> getNotHighlightValue() {
 		return notHighlightValue;
 	}
+
+	public QueryResponse getResponse() {
+		return response;
+	}
+
+	public void setResponse(QueryResponse response) {
+		this.response = response;
+	}
+
+	public Properties getProperties() {
+		return properties;
+	}
+
+	public void setProperties(Properties properties) {
+		this.properties = properties;
+	}
+
+	public boolean isUpperConvertEnable() {
+		return upperConvertEnable;
+	}
+
+	public void setUpperConvertEnable(boolean upperConvertEnable) {
+		this.upperConvertEnable = upperConvertEnable;
+	}
+
+	public boolean isCluster() {
+		return cluster;
+	}
+
+	public void setCluster(boolean cluster) {
+		this.cluster = cluster;
+	}
+
+	public String getCollection() {
+		return collection;
+	}
+
+	public void setCollection(String collection) {
+		this.collection = collection;
+	}
+
+	public String getZkHost() {
+		return zkHost;
+	}
+
+	public void setZkHost(String zkHost) {
+		this.zkHost = zkHost;
+	}
+
+	public boolean isShowTime() {
+		return showTime;
+	}
+
+	public void setShowTime(boolean showTime) {
+		this.showTime = showTime;
+	}
+
+	public String getQUOTE() {
+		return QUOTE;
+	}
+
+	public String getCOLON() {
+		return COLON;
+	}
+
+	public String getOR() {
+		return OR;
+	}
+
+	public String getAND() {
+		return AND;
+	}
+
+	public String getSPACE() {
+		return SPACE;
+	}
+
+	public String getSTAR() {
+		return STAR;
+	}
+
+	public String getDOT() {
+		return DOT;
+	}
+
+	public String getTO() {
+		return TO;
+	}
+
+	public String getASC() {
+		return ASC;
+	}
+
+	public String getDESC() {
+		return DESC;
+	}
+
+	public String getTRUE() {
+		return TRUE;
+	}
+
+	public String getFALSE() {
+		return FALSE;
+	}
+
+	public String getLEFT_PARENTHESIS() {
+		return LEFT_PARENTHESIS;
+	}
+
+	public String getRIGHT_PARENTHESIS() {
+		return RIGHT_PARENTHESIS;
+	}
+
+	public String getCOLLECTION() {
+		return COLLECTION;
+	}
+
+	public String getCLASSPATH() {
+		return CLASSPATH;
+	}
+
+	public String getBASESOLR_URL() {
+		return BASESOLR_URL;
+	}
+
+	public String getID() {
+		return ID;
+	}
+
+	public String getID_FIELDNAME() {
+		return ID_FIELDNAME;
+	}
+
+	public String getHIGHLIGHT_ENABLE() {
+		return HIGHLIGHT_ENABLE;
+	}
+
+	public String getUPPERCONVERT_ENABLE() {
+		return UPPERCONVERT_ENABLE;
+	}
+
+	public String getHIGHLIGHT_FIELDNAME() {
+		return HIGHLIGHT_FIELDNAME;
+	}
+
+	public String getHIGHTLIGHT_SIMPLEPRE() {
+		return HIGHTLIGHT_SIMPLEPRE;
+	}
+
+	public String getHIGHLIGHT_SIMPLEPOST() {
+		return HIGHLIGHT_SIMPLEPOST;
+	}
+
+	public String getCLUSTER() {
+		return CLUSTER;
+	}
+
+	public String getZKHOST() {
+		return ZKHOST;
+	}
+
+	public String getCONFIG_FILENAME() {
+		return CONFIG_FILENAME;
+	}
+
+	public String getSHOW_TIME() {
+		return SHOW_TIME;
+	}
+
+	public static String getImportEntity() {
+		return IMPORT_ENTITY;
+	}
+
+	public static String getFullImport() {
+		return FULL_IMPORT;
+	}
+
+	public static String getDeltaImport() {
+		return DELTA_IMPORT;
+	}
+
+	public void setResult(List<T> result) {
+		this.result = result;
+	}
+
+	public void setNotHighlightValue(Map<String, String> notHighlightValue) {
+		this.notHighlightValue = notHighlightValue;
+	}
+	
 }

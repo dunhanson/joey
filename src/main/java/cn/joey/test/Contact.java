@@ -2,17 +2,30 @@ package cn.joey.test;
 
 import java.util.Date;
 
+import cn.joey.annotation.Column;
+
 public class Contact {
+	@Column("id")
 	private String id;
+	@Column("company_name")
 	private String companyName;
+	@Column("contact_person")
 	private String contactPerson;
+	@Column("position")
 	private String position;
+	@Column("phone_no")
 	private String phoneNo;
+	@Column("mobile_no")
 	private String mobileNo;
+	@Column("company_addr")
 	private String companyAddr;
+	@Column("province")
 	private String province;
+	@Column("city")
 	private String city;
+	@Column("email")
 	private String email;
+	@Column("create_time")
 	private Date createTime;
 	
 	public Contact() {
