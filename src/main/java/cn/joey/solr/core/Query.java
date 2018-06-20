@@ -130,7 +130,9 @@ public class Query<T> {
 		try {
 			if(cluster) {
 				CloudSolrClient cloudSolrClient = new CloudSolrClient.Builder().withZkHost(zkHost).build();
-				cloudSolrClient.setZkClientTimeout(zkClientTimeout);
+				if(zkClientTimeout > 0) {
+					cloudSolrClient.setZkClientTimeout(zkClientTimeout);
+				}
 				cloudSolrClient.setDefaultCollection(collection);
 				client = cloudSolrClient;
 			} else {
@@ -369,7 +371,7 @@ public class Query<T> {
 			cluster = getProperty(CLUSTER, "false").equals(TRUE) ? true : false;	
 			zkHost = getProperty(ZKHOST);
 			showTime = getProperty(SHOW_TIME).equalsIgnoreCase(TRUE) ? true : false;
-			zkClientTimeout = Integer.parseInt(getProperty(ZKCLIENT_TIMEOUT, "10"));
+			zkClientTimeout = Integer.parseInt(getProperty(ZKCLIENT_TIMEOUT, "0"));
 		}
 	}	
 	

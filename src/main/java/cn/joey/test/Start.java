@@ -9,7 +9,7 @@ import cn.joey.solr.entity.Sort;
 
 public class Start {
 	public static void main(String[] args) {
-		contact();
+		nzjxm();
 	}
 	
 	public static void contact() {
@@ -57,5 +57,9 @@ public class Start {
 		query.search();
 		//分页信息
 		System.out.println(pagination);
+		//输出内容
+		query.getResult().forEach(obj -> {
+			System.out.println(obj);
+		});
 	}
 }
