@@ -1,17 +1,11 @@
 package cn.joey.test;
 
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import cn.joey.solr.core.Joey;
-import cn.joey.solr.core.Query;
 import cn.joey.solr.entity.Condition;
-import cn.joey.solr.entity.Pagination;
-import cn.joey.solr.entity.Sort;
-import com.google.common.base.Joiner;
-import com.google.gson.Gson;
 
 public class Start {
 	public static void main(String[] args) {
