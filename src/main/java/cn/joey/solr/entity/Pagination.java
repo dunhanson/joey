@@ -1,5 +1,7 @@
 package cn.joey.solr.entity;
 
+import java.util.List;
+
 /**
  * 分页对象
  * @author dunhanson
@@ -60,8 +62,13 @@ public class Pagination {
 
 	@Override
 	public String toString() {
-		return "Pagination [pageNo=" + pageNo + ", pageSize=" + pageSize + ", startNum=" + startNum + ", totalSize="
-				+ totalSize + "]";
+		return "Pagination{" +
+				"pageNo=" + pageNo +
+				", pageSize=" + pageSize +
+				", startNum=" + startNum +
+				", totalSize=" + totalSize +
+				'}';
 	}
-	
+
+
 }

@@ -1,7 +1,23 @@
 package cn.joey.test;
 
+import cn.joey.solr.annotation.JoeyCollection;
+import cn.joey.solr.annotation.JoeyField;
+import cn.joey.solr.annotation.JoeyID;
 import java.util.Date;
 
+@JoeyCollection(
+		value = "contact",
+		baseSolrUrl = "http://192.168.2.131:8983/solr/contact",
+		cluster = true,
+		zkHost = "192.168.2.131:2181",
+		zkClientTimeout = 20,
+		entity = "c_contact_new",
+		upperConvertEnable = true,
+		highlight = true,
+		highlightFieldName = "company_name",
+		highlightSimplePre = "<font style=\"color:red\">",
+		highlightSimplePost = "</font>"
+)
 public class Contact {
 	private String id;
 	private String companyName;
