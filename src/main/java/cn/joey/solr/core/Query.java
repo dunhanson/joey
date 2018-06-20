@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import cn.joey.annotation.JoeyField;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.impl.CloudSolrClient;
@@ -326,7 +327,6 @@ public class Query<T> {
 	
 	/**
 	 * 增量更新索引
-	 * @param clazz
 	 * @return
 	 */
 	public String deltaImport() {	
@@ -405,6 +405,9 @@ public class Query<T> {
 				Object value = document.get(name);
 				if(upperConvertEnable) {//启用大写转换（userName ---> user_name）
 					name = toLowerUnderline(field.getName());
+					value = document.get(name);
+				} else if(field.getAnnotation(JoeyField.class) != null) {//注解
+					name = field.getAnnotation(JoeyField.class).value();
 					value = document.get(name);
 				}
 				//高亮字段
@@ -538,7 +541,6 @@ public class Query<T> {
 	
 	/**
 	 * 读取配置文件
-	 * @param <T>
 	 * @return
 	 */
 	private void loadConfiguration(){
@@ -558,8 +560,6 @@ public class Query<T> {
 	
 	/**
 	 * 获取属性值
-	 * @param nickname 
-	 * @param name
 	 * @return
 	 */
 	private String getProperty(String key) {
