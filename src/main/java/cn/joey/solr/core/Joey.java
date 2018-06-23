@@ -2,10 +2,6 @@ package cn.joey.solr.core;
 
 import cn.joey.solr.annotation.JoeyCollection;
 import cn.joey.solr.annotation.JoeyField;
-import cn.joey.solr.annotation.JoeyID;
-import cn.joey.solr.entity.Condition;
-import cn.joey.solr.entity.Pagination;
-import cn.joey.solr.entity.Sort;
 import cn.joey.utils.HttpUtils;
 import com.google.common.base.Joiner;
 import org.apache.solr.client.solrj.SolrClient;
@@ -91,7 +87,7 @@ public class Joey<T> {
 		this.q = q;
 		this.fq = fq;
 		this.sort = sort;
-		this.pagination = pagination;
+		this.pagination = new Pagination(1, 30);
 		init(clazz);
 	}
 
@@ -100,7 +96,7 @@ public class Joey<T> {
 		this.q = q;
 		this.fq = fq;
 		this.sort = sort;
-		this.pagination = pagination;
+		this.pagination = new Pagination(1, 30);
 		init(clazz);
 	}
 
@@ -443,11 +439,10 @@ public class Joey<T> {
 	private <T> String getIdFileName(Class<T> clazz) {
 		Field[] fields = clazz.getDeclaredFields();
 		for(Field field : fields) {
-			JoeyID joeyID = field.getAnnotation(JoeyID.class);
-			if(joeyID == null) {
-				continue;
+			JoeyField joeyField = field.getAnnotation(JoeyField.class);
+			if(joeyField.isID()) {
+				return joeyField.value();
 			}
-			return joeyID.value();
 		}
 		return "id";
 	}
@@ -466,7 +461,6 @@ public class Joey<T> {
 
 	/**
 	 * 全量更新索引
-	 * @param clazz
 	 * @param param 自定义参数
 	 * @param <T>
 	 * @return
@@ -482,7 +476,6 @@ public class Joey<T> {
 
 	/**
 	 * 增量更新索引
-	 * @param clazz
 	 * @param param 自定义参数
 	 * @param <T>
 	 * @return

@@ -11,4 +11,6 @@ public @interface JoeyField {
 
     public String value();
 
+    public boolean isID() default false;
+
 }
