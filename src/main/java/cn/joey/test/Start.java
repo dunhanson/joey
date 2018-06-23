@@ -9,14 +9,14 @@ import cn.joey.solr.entity.Condition;
 
 public class Start {
 	public static void main(String[] args) {
-		dataImport();
+		query();
 	}
 
 	public static void query() {
-		Joey joey = new Joey();
+		Joey joey = new Joey(Contact.class);
 		List<Condition> q = new ArrayList<Condition>();
 		q.add(new Condition("company_name", new String[]{"电子科技"}));
-		List<Contact> result = joey.search(q,Contact.class);
+		List<Contact> result = joey.search();
 		System.out.println(result.size());
 		result.forEach(obj -> {
 			System.out.println(obj);
@@ -30,7 +30,7 @@ public class Start {
 		Map<String, Object> param = new HashMap<>();
 		param.put("index", 0);
 		param.put("size", 100);
-		System.out.println(new Joey().fullImport(Contact.class, param));
+		System.out.println(new Joey(Contact.class).fullImport());
 	}
 
 }

@@ -28,7 +28,7 @@ import java.util.regex.Pattern;
  * @author dunhanson
  * @since 2018-06-20
  */
-public class Joey {
+public class Joey<T> {
 	private final String QUOTE = "\"";
 	private final String COLON = ":";
 	private final String OR = "OR";
@@ -63,47 +63,55 @@ public class Joey {
 	private List<Condition> fq;
 	private List<Sort> sort;
 	private Pagination pagination;
+	private Class<T> clazz;
 
-	public Joey() {
-
+	public Joey(Class<T> clazz) {
+		this.pagination = new Pagination(1, 30);
+		this.clazz = clazz;
+		init(clazz);
 	}
 
-	public <T> List<T> search(List<Condition> q, Class<T> clazz) {
-		return search(q, null, null, new Pagination(1, 30), clazz);
+	public Joey(Class<T> clazz, List<Condition> q) {
+		this.clazz = clazz;
+		this.q = q;
+		this.pagination = new Pagination(1, 30);
+		init(clazz);
 	}
 
-	public <T> List<T> search(List<Condition> q, Pagination pagination, Class<T> clazz) {
-		return search(q, null, null, pagination, clazz);
+	public Joey(Class<T> clazz, List<Condition> q, List<Condition> fq) {
+		this.clazz = clazz;
+		this.q = q;
+		this.fq = fq;
+		this.pagination = new Pagination(1, 30);
+		init(clazz);
 	}
 
-	public <T> List<T> search(List<Condition> q, List<Condition> fq, Class<T> clazz) {
-		return search(q, fq, null, pagination, clazz);
+	public Joey(Class<T> clazz, List<Condition> q, List<Condition> fq, List<Sort> sort) {
+		this.clazz = clazz;
+		this.q = q;
+		this.fq = fq;
+		this.sort = sort;
+		this.pagination = pagination;
+		init(clazz);
 	}
 
-	public <T> List<T> search(List<Condition> q, List<Condition> fq, Pagination pagination, Class<T> clazz) {
-		return search(q, fq, null, pagination, clazz);
-	}
-
-	public <T> List<T> search(Pagination pagination, Class<T> clazz) {
-		return search(null, null, null, pagination, clazz);
-	}
-
-	public <T> List<T> search(Class<T> clazz) {
-		return search(null, null, null, new Pagination(1, 30), clazz);
+	public Joey(Class<T> clazz, List<Condition> q, List<Condition> fq, List<Sort> sort, Pagination pagination) {
+		this.clazz = clazz;
+		this.q = q;
+		this.fq = fq;
+		this.sort = sort;
+		this.pagination = pagination;
+		init(clazz);
 	}
 
 	/**
 	 * 全文检索
 	 */
-	public <T> List<T> search(List<Condition> q, List<Condition> fq, List<Sort> sort, Pagination pagination, Class<T> clazz) {
+	public List<T> search() {
 		SolrClient client = null;
 		try {
-			this.q = q;
-			this.fq = fq;
-			this.sort = sort;
-			this.pagination = pagination;
-			init(clazz);
-			if(cluster) {//集群模式
+			//集群模式
+			if(cluster) {
 				CloudSolrClient cloudSolrClient = new CloudSolrClient.Builder().withZkHost(zkHost).build();
 				if(zkClientTimeout > 0) {
 					cloudSolrClient.setZkClientTimeout(zkClientTimeout);
@@ -113,21 +121,22 @@ public class Joey {
 			} else {//单机模式
 				client = new HttpSolrClient.Builder(baseSolrUrl).build();
 			}
-			SolrQuery query = new SolrQuery();
 			//查询参数
+			SolrQuery query = new SolrQuery();
 			query.set("q", getQStr());
 			query.set("fq", getFQStr());
 			query.set("sort", getSortStr());
 			query.setStart(pagination.getStartNum());
 			query.setRows(pagination.getPageSize());
-			if(highlight) {//高亮设置
+			//高亮设置
+			if(highlight) {
 				query.setHighlight(highlight);
 				query.addHighlightField(highlightFieldName);
 				query.setHighlightSimplePre(highlightSimplePre);
 				query.setHighlightSimplePost(highlightSimplePost);
 			}
 			response = client.query(query);
-			return toEntities(clazz);
+			return toEntities();
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		} finally {
@@ -303,11 +312,11 @@ public class Joey {
 	 * 转换成实体对象集合
 	 * @return 实体对象集合
 	 */
-	private <T> List<T> toEntities(Class<T> clazz){
+	private List<T> toEntities(){
 		List<T> entitys = new ArrayList<>();
 		SolrDocumentList documentList = response.getResults();
 		for (SolrDocument document : documentList) {
-			entitys.add(toEntity(document, clazz));
+			entitys.add(toEntity(document));
 		}
 		pagination.setTotalSize(documentList.getNumFound());
 		return entitys;
@@ -318,7 +327,7 @@ public class Joey {
 	 * @param document SolrDocument对象
 	 * @return 实体对象
 	 */
-	private <T> T toEntity(SolrDocument document, Class<T> clazz) {
+	private T toEntity(SolrDocument document) {
 		T entity;
 		try {
 			entity = clazz.newInstance();
@@ -447,9 +456,8 @@ public class Joey {
 	 * 全量更新索引
 	 * @return
 	 */
-	public <T> String fullImport(Class<T> clazz) {
+	public <T> String fullImport() {
 		try {
-			init(clazz);
 			return dataImport(baseSolrUrl, entity, FULL_IMPORT, new HashMap<>());
 		} catch (Exception e) {
 			throw new RuntimeException(e);
@@ -463,10 +471,8 @@ public class Joey {
 	 * @param <T>
 	 * @return
 	 */
-	public <T> String fullImport(Class<T> clazz, Map<String, Object> param) {
+	public <T> String fullImport(Map<String, Object> param) {
 		try {
-			//初始化参数
-			init(clazz);
 			//执行更新索引并返回结果
 			return dataImport(baseSolrUrl, entity, FULL_IMPORT, param);
 		} catch (Exception e) {
@@ -481,10 +487,8 @@ public class Joey {
 	 * @param <T>
 	 * @return
 	 */
-	public <T> String deltaImport(Class<T> clazz, Map<String, Object> param) {
+	public <T> String deltaImport(Map<String, Object> param) {
 		try {
-			//初始化参数
-			init(clazz);
 			//执行更新索引并返回结果
 			return dataImport(baseSolrUrl, entity, DELTA_IMPORT, param);
 		} catch (Exception e) {
@@ -496,9 +500,8 @@ public class Joey {
 	 * 增量更新索引
 	 * @return
 	 */
-	public <T> String deltaImport(Class<T> clazz) {
+	public <T> String deltaImport() {
 		try {
-			init(clazz);
 			//执行更新索引并返回结果
 			return dataImport(baseSolrUrl, entity, DELTA_IMPORT, new HashMap<>());
 		} catch (Exception e) {
@@ -571,5 +574,141 @@ public class Joey {
 		} catch (Exception e) {
 
 		}
+	}
+
+	public String getCollection() {
+		return collection;
+	}
+
+	public void setCollection(String collection) {
+		this.collection = collection;
+	}
+
+	public String getBaseSolrUrl() {
+		return baseSolrUrl;
+	}
+
+	public void setBaseSolrUrl(String baseSolrUrl) {
+		this.baseSolrUrl = baseSolrUrl;
+	}
+
+	public boolean isCluster() {
+		return cluster;
+	}
+
+	public void setCluster(boolean cluster) {
+		this.cluster = cluster;
+	}
+
+	public String getZkHost() {
+		return zkHost;
+	}
+
+	public void setZkHost(String zkHost) {
+		this.zkHost = zkHost;
+	}
+
+	public int getZkClientTimeout() {
+		return zkClientTimeout;
+	}
+
+	public void setZkClientTimeout(int zkClientTimeout) {
+		this.zkClientTimeout = zkClientTimeout;
+	}
+
+	public boolean isHighlight() {
+		return highlight;
+	}
+
+	public void setHighlight(boolean highlight) {
+		this.highlight = highlight;
+	}
+
+	public String getHighlightFieldName() {
+		return highlightFieldName;
+	}
+
+	public void setHighlightFieldName(String highlightFieldName) {
+		this.highlightFieldName = highlightFieldName;
+	}
+
+	public String getHighlightSimplePre() {
+		return highlightSimplePre;
+	}
+
+	public void setHighlightSimplePre(String highlightSimplePre) {
+		this.highlightSimplePre = highlightSimplePre;
+	}
+
+	public String getHighlightSimplePost() {
+		return highlightSimplePost;
+	}
+
+	public void setHighlightSimplePost(String highlightSimplePost) {
+		this.highlightSimplePost = highlightSimplePost;
+	}
+
+	public boolean isUnderlineConvertEnable() {
+		return underlineConvertEnable;
+	}
+
+	public void setUnderlineConvertEnable(boolean underlineConvertEnable) {
+		this.underlineConvertEnable = underlineConvertEnable;
+	}
+
+	public String getEntity() {
+		return entity;
+	}
+
+	public void setEntity(String entity) {
+		this.entity = entity;
+	}
+
+	public QueryResponse getResponse() {
+		return response;
+	}
+
+	public void setResponse(QueryResponse response) {
+		this.response = response;
+	}
+
+	public List<Condition> getQ() {
+		return q;
+	}
+
+	public void setQ(List<Condition> q) {
+		this.q = q;
+	}
+
+	public List<Condition> getFq() {
+		return fq;
+	}
+
+	public void setFq(List<Condition> fq) {
+		this.fq = fq;
+	}
+
+	public List<Sort> getSort() {
+		return sort;
+	}
+
+	public void setSort(List<Sort> sort) {
+		this.sort = sort;
+	}
+
+	public Pagination getPagination() {
+		return pagination;
+	}
+
+	public void setPagination(Pagination pagination) {
+		this.pagination = pagination;
+	}
+
+	public Class<T> getClazz() {
+		return clazz;
+	}
+
+	public void setClazz(Class<T> clazz) {
+		this.clazz = clazz;
 	}
 }

@@ -12,11 +12,7 @@ import java.util.Date;
 		zkHost = "192.168.2.131:2181",
 		zkClientTimeout = 20,
 		entity = "c_contact_new",
-		upperConvertEnable = true,
-		highlight = true,
-		highlightFieldName = "company_name",
-		highlightSimplePre = "<font style=\"color:red\">",
-		highlightSimplePost = "</font>"
+		underlineConvertEnable = true
 )
 public class Contact {
 	private String id;
