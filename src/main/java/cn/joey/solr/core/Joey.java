@@ -1,13 +1,11 @@
 package cn.joey.solr.core;
 
-import cn.joey.solr.annotation.JoeyCollection;
+import cn.joey.solr.annotation.Collection;
 import cn.joey.solr.annotation.JoeyField;
 import cn.joey.utils.HttpUtils;
 import com.google.common.base.Joiner;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrQuery;
-import org.apache.solr.client.solrj.impl.CloudSolrClient;
-import org.apache.solr.client.solrj.impl.HttpSolrClient;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
@@ -43,11 +41,7 @@ public class Joey<T> {
 	private final String RIGHT_BRACKET = "]";
 	private final String FULL_IMPORT = "full-import";
 	private final String DELTA_IMPORT = "delta-import";
-	private String collection;
 	private String baseSolrUrl;
-	private boolean cluster;
-	private String zkHost;
-	private int zkClientTimeout;
 	private boolean highlight;
 	private String highlightFieldName;
 	private String highlightSimplePre;
@@ -67,10 +61,31 @@ public class Joey<T> {
 		init(clazz);
 	}
 
-	public Joey(Class<T> clazz, List<Condition> q) {
+	public Joey(Class<T> clazz, Pagination pagination) {
+		this.pagination = pagination;
 		this.clazz = clazz;
-		this.q = q;
+		init(clazz);
+	}
+
+	public Joey(Class<T> clazz, List<Condition> condition, boolean isQ) {
+		this.clazz = clazz;
+		if(isQ) {
+			this.q = condition;
+		} else {
+			this.fq = condition;
+		}
 		this.pagination = new Pagination(1, 30);
+		init(clazz);
+	}
+
+	public Joey(Class<T> clazz, List<Condition> condition, boolean isQ, Pagination pagination) {
+		this.clazz = clazz;
+		if(isQ) {
+			this.q = condition;
+		} else {
+			this.fq = condition;
+		}
+		this.pagination = pagination;
 		init(clazz);
 	}
 
@@ -78,6 +93,18 @@ public class Joey<T> {
 		this.clazz = clazz;
 		this.q = q;
 		this.fq = fq;
+		this.pagination = new Pagination(1, 30);
+		init(clazz);
+	}
+
+	public Joey(Class<T> clazz, List<Condition> condition, boolean isQ, List<Sort> sort) {
+		this.clazz = clazz;
+		if(isQ) {
+			this.q = condition;
+		} else {
+			this.fq = condition;
+		}
+		this.sort = sort;
 		this.pagination = new Pagination(1, 30);
 		init(clazz);
 	}
@@ -100,23 +127,24 @@ public class Joey<T> {
 		init(clazz);
 	}
 
+	public Joey(Class<T> clazz, List<Condition> condition, boolean isQ, List<Sort> sort, Pagination pagination) {
+		this.clazz = clazz;
+		if(isQ) {
+			this.q = condition;
+		} else {
+			this.fq = condition;
+		}
+		this.sort = sort;
+		this.pagination = new Pagination(1, 30);
+		init(clazz);
+	}
+
 	/**
 	 * 全文检索
 	 */
 	public List<T> search() {
 		SolrClient client = null;
 		try {
-			//集群模式
-			if(cluster) {
-				CloudSolrClient cloudSolrClient = new CloudSolrClient.Builder().withZkHost(zkHost).build();
-				if(zkClientTimeout > 0) {
-					cloudSolrClient.setZkClientTimeout(zkClientTimeout);
-				}
-				cloudSolrClient.setDefaultCollection(collection);
-				client = cloudSolrClient;
-			} else {//单机模式
-				client = new HttpSolrClient.Builder(baseSolrUrl).build();
-			}
 			//查询参数
 			SolrQuery query = new SolrQuery();
 			query.set("q", getQStr());
@@ -131,7 +159,11 @@ public class Joey<T> {
 				query.setHighlightSimplePre(highlightSimplePre);
 				query.setHighlightSimplePost(highlightSimplePost);
 			}
-			response = client.query(query);
+			//获取SolrClient进行查询
+			response = SolrClientStore.getSolrClient(clazz).query(query);
+			System.out.println("qTime():" + response.getQTime());;
+			System.out.println("elapsedTime:" + response.getElapsedTime());
+			//返回实体对象集合
 			return toEntities();
 		} catch (Exception e) {
 			throw new RuntimeException(e);
@@ -146,12 +178,8 @@ public class Joey<T> {
 	 * @param <T>
 	 */
 	public <T> void init(Class<T> clazz) {
-		JoeyCollection collection = clazz.getAnnotation(JoeyCollection.class);
+		Collection collection = clazz.getAnnotation(Collection.class);
 		this.baseSolrUrl = collection.baseSolrUrl();
-		this.cluster = collection.cluster();
-		this.zkHost = collection.zkHost();
-		this.zkClientTimeout = collection.zkClientTimeout();
-		this.collection = collection.value();
 		this.underlineConvertEnable = collection.underlineConvertEnable();
 		this.highlight = collection.highlight();
 		this.highlightFieldName = collection.highlightFieldName();
@@ -569,44 +597,12 @@ public class Joey<T> {
 		}
 	}
 
-	public String getCollection() {
-		return collection;
-	}
-
-	public void setCollection(String collection) {
-		this.collection = collection;
-	}
-
 	public String getBaseSolrUrl() {
 		return baseSolrUrl;
 	}
 
 	public void setBaseSolrUrl(String baseSolrUrl) {
 		this.baseSolrUrl = baseSolrUrl;
-	}
-
-	public boolean isCluster() {
-		return cluster;
-	}
-
-	public void setCluster(boolean cluster) {
-		this.cluster = cluster;
-	}
-
-	public String getZkHost() {
-		return zkHost;
-	}
-
-	public void setZkHost(String zkHost) {
-		this.zkHost = zkHost;
-	}
-
-	public int getZkClientTimeout() {
-		return zkClientTimeout;
-	}
-
-	public void setZkClientTimeout(int zkClientTimeout) {
-		this.zkClientTimeout = zkClientTimeout;
 	}
 
 	public boolean isHighlight() {

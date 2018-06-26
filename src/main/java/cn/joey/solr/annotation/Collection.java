@@ -7,7 +7,7 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface JoeyCollection {
+public @interface Collection {
 
     /**
      * collection名称
@@ -34,10 +34,16 @@ public @interface JoeyCollection {
     public boolean cluster() default false;
 
     /**
-     * zk客户端超时时长
+     * zk客户端超时时间
      * @return
      */
     public int zkClientTimeout() default 0;
+
+    /**
+     * zk连接超时时间
+     * @return
+     */
+    public int zkConnectTimeout() default 0;
 
     /**
      *
@@ -49,7 +55,7 @@ public @interface JoeyCollection {
      * 下划线转换
      * @return
      */
-    public boolean underlineConvertEnable() default false;
+    public boolean underlineConvertEnable() default true;
 
     /**
      * 启用高亮

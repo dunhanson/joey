@@ -1,16 +1,16 @@
 package cn.joey.entity;
 
-import cn.joey.solr.annotation.JoeyCollection;
+import cn.joey.solr.annotation.Collection;
 import cn.joey.solr.annotation.JoeyField;
-
 import java.util.Date;
 
-@JoeyCollection(
+@Collection(
 		value = "contact",
 		baseSolrUrl = "http://192.168.2.131:8983/solr/contact",
 		cluster = true,
 		zkHost = "192.168.2.131:2181",
 		zkClientTimeout = 20,
+		zkConnectTimeout = 20,
 		entity = "c_contact_new",
 		underlineConvertEnable = false
 )
