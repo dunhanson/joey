@@ -10,7 +10,10 @@ import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.net.URLEncoder;
 import java.util.*;
@@ -41,19 +44,39 @@ public class Joey<T> {
 	private final String RIGHT_BRACKET = "]";
 	private final String FULL_IMPORT = "full-import";
 	private final String DELTA_IMPORT = "delta-import";
-	private String baseSolrUrl;
-	private boolean highlight;
+	private final String CONFIG_FILENAME = "joey.properties";
+    private final String COLLECTION = "collection";
+    private final String CLASSPATH = "classpath";
+    private final String BASESOLR_URL = "baseSolrUrl";
+    private final String DATAIMPORT_ENTITY = "dataimportEntity";
+    private final String CLUSTER = "cluster";
+    private final String ZKHOST = "zkHost";
+    private final String SHOW_TIME = "showTime";
+    private final static String ZKCLIENT_TIMEOUT = "zkClientTimeout";
+    private final static String ZKCONNECT_TIMEOUT = "zkConnectTimeout";
+    private final String UNDERLINE_CONVERT_ENABLE = "underlineConvertEnable";
+    private final String HIGHLIGHT_ENABLE = "highlightEnable";
+    private final String HIGHLIGHT_FIELDNAME = "highlightFieldName";
+    private final String HIGHTLIGHT_SIMPLEPRE = "highlightSimplePre";
+    private final String HIGHLIGHT_SIMPLEPOST = "highlightSimplePost";
+	private boolean highlightEnable;
 	private String highlightFieldName;
 	private String highlightSimplePre;
 	private String highlightSimplePost;
 	private boolean underlineConvertEnable;
-	private String entity;
+	private String dataimportEntity;
 	private QueryResponse response;
 	private List<Condition> q;
 	private List<Condition> fq;
 	private List<Sort> sort;
 	private Pagination pagination;
 	private Class<T> clazz;
+	private Properties properties;
+	private SolrInfo solrInfo = new SolrInfo();
+    private boolean showTime;
+    private String baseSolrUrl;
+    private String collection;
+    private Logger logger = LoggerFactory.getLogger(Joey.class);
 
 	public Joey(Class<T> clazz) {
 		this.pagination = new Pagination(1, 30);
@@ -153,16 +176,18 @@ public class Joey<T> {
 			query.setStart(pagination.getStartNum());
 			query.setRows(pagination.getPageSize());
 			//高亮设置
-			if(highlight) {
-				query.setHighlight(highlight);
+			if(highlightEnable) {
+				query.setHighlight(highlightEnable);
 				query.addHighlightField(highlightFieldName);
 				query.setHighlightSimplePre(highlightSimplePre);
 				query.setHighlightSimplePost(highlightSimplePost);
 			}
 			//获取SolrClient进行查询
-			response = SolrClientStore.getSolrClient(clazz).query(query);
-			System.out.println("qTime():" + response.getQTime());;
-			System.out.println("elapsedTime:" + response.getElapsedTime());
+			response = SolrClientStore.getSolrClient(solrInfo).query(query);
+			if(showTime) {
+                logger.info("qTime():" + response.getQTime());
+                logger.info("elapsedTime:" + response.getElapsedTime());
+            }
 			//返回实体对象集合
 			return toEntities();
 		} catch (Exception e) {
@@ -178,15 +203,58 @@ public class Joey<T> {
 	 * @param <T>
 	 */
 	public <T> void init(Class<T> clazz) {
-		Collection collection = clazz.getAnnotation(Collection.class);
-		this.baseSolrUrl = collection.baseSolrUrl();
-		this.underlineConvertEnable = collection.underlineConvertEnable();
-		this.highlight = collection.highlight();
-		this.highlightFieldName = collection.highlightFieldName();
-		this.highlightSimplePre = collection.highlightSimplePre();
-		this.highlightSimplePost = collection.highlightSimplePost();
-		this.entity = collection.entity();
+	    loadConfiguration();
+        if(properties != null) { // 配置方式
+            System.out.println("正在使用配置方式");
+            collection = getCollection(properties);
+            this.underlineConvertEnable = getProperty(UNDERLINE_CONVERT_ENABLE).equals(TRUE);
+            this.highlightEnable = getProperty(HIGHLIGHT_ENABLE).equals(TRUE);
+            this.highlightFieldName = getProperty(HIGHLIGHT_FIELDNAME, "");
+            this.highlightSimplePre = getProperty(HIGHTLIGHT_SIMPLEPRE, "");
+            this.highlightSimplePost = getProperty(HIGHLIGHT_SIMPLEPOST, "");
+            this.dataimportEntity = getProperty(DATAIMPORT_ENTITY, "");
+            this.showTime = getProperty(SHOW_TIME).equalsIgnoreCase(TRUE);
+            solrInfo.setCollection(collection);
+            solrInfo.setCluster(getProperty(CLUSTER, "false").equals(TRUE));
+            solrInfo.setBaseSolrUrl(getProperty(BASESOLR_URL));
+            solrInfo.setZkHost(getProperty(ZKHOST));
+            solrInfo.setZkClientTimeout(Integer.parseInt(getProperty(ZKCLIENT_TIMEOUT, "0")));
+            solrInfo.setZkConnectTimeout(Integer.parseInt(getProperty(ZKCONNECT_TIMEOUT, "0")));
+        } else { // 注解方式
+            System.out.println("正在使用注解方式");
+            Collection collection = clazz.getAnnotation(Collection.class);
+            this.underlineConvertEnable = collection.underlineConvertEnable();
+            this.highlightEnable = collection.highlightEnable();
+            this.highlightFieldName = collection.highlightFieldName();
+            this.highlightSimplePre = collection.highlightSimplePre();
+            this.highlightSimplePost = collection.highlightSimplePost();
+            this.dataimportEntity = collection.dataimportEntity();
+            this.showTime = collection.showTime();
+            solrInfo.setCollection(collection.value());
+            solrInfo.setCluster(collection.cluster());
+            solrInfo.setBaseSolrUrl(collection.baseSolrUrl());
+            solrInfo.setZkHost(collection.zkHost());
+            solrInfo.setZkClientTimeout(collection.zkConnectTimeout());
+            solrInfo.setZkConnectTimeout(collection.zkClientTimeout());
+        }
 	}
+
+    /**
+     * 获取collection
+     * @param properties
+     * @return
+     */
+    private String getCollection(Properties properties) {
+        String[] collectionArr = properties.getProperty(COLLECTION).split(",");
+        for (String collection : collectionArr) {	//遍历nickname
+            String key = collection + DOT + CLASSPATH;
+            String classpath = properties.getProperty(key);
+            if(classpath.equals(clazz.getCanonicalName())) {
+                return collection;
+            }
+        }
+        throw new RuntimeException("未能匹配到collection");
+    }
 
 	/**
 	 * 获取q (查询条件)
@@ -368,7 +436,7 @@ public class Joey<T> {
 					value = document.get(name);
 				}
 				//高亮字段
-				if(highlight && highlightFieldName.equalsIgnoreCase(name)) {
+				if(highlightEnable && highlightFieldName.equalsIgnoreCase(name)) {
 					String highlightFieldValue = getHighlightingFieldValue(document, response, getIdFileName(clazz));
 					if(StringUtils.isEmpty(highlightFieldValue) == false) {
 						value = highlightFieldValue;
@@ -468,7 +536,7 @@ public class Joey<T> {
 		Field[] fields = clazz.getDeclaredFields();
 		for(Field field : fields) {
 			JoeyField joeyField = field.getAnnotation(JoeyField.class);
-			if(joeyField.isID()) {
+			if(joeyField != null && joeyField.isID()) {
 				return joeyField.value();
 			}
 		}
@@ -481,7 +549,7 @@ public class Joey<T> {
 	 */
 	public <T> String fullImport() {
 		try {
-			return dataImport(baseSolrUrl, entity, FULL_IMPORT, new HashMap<>());
+			return dataImport(baseSolrUrl, dataimportEntity, FULL_IMPORT, new HashMap<>());
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
@@ -496,7 +564,7 @@ public class Joey<T> {
 	public <T> String fullImport(Map<String, Object> param) {
 		try {
 			//执行更新索引并返回结果
-			return dataImport(baseSolrUrl, entity, FULL_IMPORT, param);
+			return dataImport(baseSolrUrl, dataimportEntity, FULL_IMPORT, param);
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
@@ -511,7 +579,7 @@ public class Joey<T> {
 	public <T> String deltaImport(Map<String, Object> param) {
 		try {
 			//执行更新索引并返回结果
-			return dataImport(baseSolrUrl, entity, DELTA_IMPORT, param);
+			return dataImport(baseSolrUrl, dataimportEntity, DELTA_IMPORT, param);
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
@@ -524,7 +592,7 @@ public class Joey<T> {
 	public <T> String deltaImport() {
 		try {
 			//执行更新索引并返回结果
-			return dataImport(baseSolrUrl, entity, DELTA_IMPORT, new HashMap<>());
+			return dataImport(baseSolrUrl, dataimportEntity, DELTA_IMPORT, new HashMap<>());
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
@@ -597,6 +665,47 @@ public class Joey<T> {
 		}
 	}
 
+	/**
+	 * 读取配置文件
+	 * @return
+	 */
+	private void loadConfiguration(){
+        ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+        try(InputStream in = contextClassLoader.getResourceAsStream(CONFIG_FILENAME)) {
+            if(in != null) {
+                properties = new Properties();
+                properties.load(new InputStreamReader(in, "UTF-8"));
+            }
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+    /**
+     * 获取属性值
+     * @param key
+     * @return
+     */
+    private String getProperty(String key) {
+        key = collection + DOT + key;
+        String value = properties.getProperty(key);
+        if(value == null) {
+            value = "";
+        }
+        return value;
+    }
+
+    /**
+     * 获取属性值（默认值）
+     * @param key
+     * @param defaultValue
+     * @return
+     */
+    private String getProperty(String key, String defaultValue) {
+        key = collection + DOT + key;
+        return properties.getProperty(key, defaultValue);
+    }
+
 	public String getBaseSolrUrl() {
 		return baseSolrUrl;
 	}
@@ -605,12 +714,12 @@ public class Joey<T> {
 		this.baseSolrUrl = baseSolrUrl;
 	}
 
-	public boolean isHighlight() {
-		return highlight;
+	public boolean getHighlightEnable() {
+		return highlightEnable;
 	}
 
-	public void setHighlight(boolean highlight) {
-		this.highlight = highlight;
+	public void setHighlightEnable(boolean highlightEnable) {
+		this.highlightEnable = highlightEnable;
 	}
 
 	public String getHighlightFieldName() {
@@ -645,12 +754,12 @@ public class Joey<T> {
 		this.underlineConvertEnable = underlineConvertEnable;
 	}
 
-	public String getEntity() {
-		return entity;
+	public String getDataimportEntity() {
+		return dataimportEntity;
 	}
 
-	public void setEntity(String entity) {
-		this.entity = entity;
+	public void setDataimportEntity(String dataimportEntity) {
+		this.dataimportEntity = dataimportEntity;
 	}
 
 	public QueryResponse getResponse() {

@@ -6,12 +6,12 @@ import java.util.Date;
 
 @Collection(
 		value = "contact",
-		baseSolrUrl = "http://192.168.2.131:8983/solr/contact",
+		baseSolrUrl = "http://192.168.2.170:8983/solr/contact",
 		cluster = true,
-		zkHost = "192.168.2.131:2181",
+		zkHost = "192.168.2.170:2181",
 		zkClientTimeout = 20,
 		zkConnectTimeout = 20,
-		entity = "c_contact_new",
+		dataimportEntity = "c_contact_new",
 		underlineConvertEnable = false
 )
 public class Contact {

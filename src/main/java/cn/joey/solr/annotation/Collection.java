@@ -49,7 +49,7 @@ public @interface Collection {
      *
      * @return
      */
-    public String entity() default "";
+    public String dataimportEntity() default "";
 
     /**
      * 下划线转换
@@ -57,11 +57,18 @@ public @interface Collection {
      */
     public boolean underlineConvertEnable() default true;
 
+
+    /**
+     * 显示查询时间
+     * @return
+     */
+    public boolean showTime() default false;
+
     /**
      * 启用高亮
      * @return
      */
-    public boolean highlight() default false;
+    public boolean highlightEnable() default false;
 
     /**
      * 高亮字段

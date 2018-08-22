@@ -3,6 +3,7 @@ package cn.joey.demo;
 import java.util.*;
 
 import cn.joey.entity.Contact;
+import cn.joey.entity.DesignedProject;
 import cn.joey.solr.core.Joey;
 import cn.joey.solr.core.Condition;
 import cn.joey.solr.core.Pagination;
@@ -10,8 +11,17 @@ import cn.joey.solr.core.Sort;
 
 public class Example {
 	public static void main(String[] args) {
-		query1();
+        designProject();
 	}
+
+
+	public static void designProject() {
+        //query 1
+        List<DesignedProject> result = new Joey(DesignedProject.class).search();
+        result.forEach(obj -> {
+            System.out.println(obj);
+        });
+    }
 
 	public static void query1() {
 		//query 1
