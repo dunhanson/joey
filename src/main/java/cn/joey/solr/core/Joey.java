@@ -205,7 +205,6 @@ public class Joey<T> {
 	public <T> void init(Class<T> clazz) {
 	    loadConfiguration();
         if(properties != null) { // 配置方式
-            System.out.println("正在使用配置方式");
             collection = getCollection(properties);
             this.underlineConvertEnable = getProperty(UNDERLINE_CONVERT_ENABLE).equals(TRUE);
             this.highlightEnable = getProperty(HIGHLIGHT_ENABLE).equals(TRUE);
@@ -221,7 +220,6 @@ public class Joey<T> {
             solrInfo.setZkClientTimeout(Integer.parseInt(getProperty(ZKCLIENT_TIMEOUT, "0")));
             solrInfo.setZkConnectTimeout(Integer.parseInt(getProperty(ZKCONNECT_TIMEOUT, "0")));
         } else { // 注解方式
-            System.out.println("正在使用注解方式");
             Collection collection = clazz.getAnnotation(Collection.class);
             this.underlineConvertEnable = collection.underlineConvertEnable();
             this.highlightEnable = collection.highlightEnable();
