@@ -4,86 +4,32 @@ import java.util.*;
 
 import cn.joey.entity.Contact;
 import cn.joey.entity.DesignedProject;
-import cn.joey.solr.core.Joey;
 import cn.joey.solr.core.Condition;
 import cn.joey.solr.core.Pagination;
+import cn.joey.solr.core.Query;
 import cn.joey.solr.core.Sort;
 
+/**
+ * 搜索条件
+ * @author dunhanson
+ * @since 2018-08-22
+ */
 public class Example {
 	public static void main(String[] args) {
-        designProject();
+        search();
 	}
 
 
-	public static void designProject() {
-        //query 1
-        List<DesignedProject> result = new Joey(DesignedProject.class).search();
-        result.forEach(obj -> {
+	public static void search() {
+        List<Condition> q = new ArrayList<>();
+        List<Condition> fq = new ArrayList<>();
+        List<Sort> sort = new ArrayList<>();
+        Pagination pagination = new Pagination(2, 30);
+        Query.search(DesignedProject.class, q, fq, sort, pagination).forEach(obj->{
             System.out.println(obj);
         });
+        System.out.println(pagination);
     }
-
-	public static void query1() {
-		//query 1
-		List<Contact> result = new Joey(Contact.class).search();
-		result.forEach(obj -> {
-			System.out.println(obj);
-		});
-	}
-
-	public static void query2() {
-		//query 2
-		List<Contact> result = new Joey(Contact.class, new Pagination(1, 30)).search();
-		result.forEach(obj -> {
-			System.out.println(obj);
-		});
-	}
-
-	public static void query3() {
-		//---查询条件---
-		List<Condition> q = new ArrayList<>();
-		q.add(new Condition("company_name", new String[]{"厦门"}));
-		//---查询结果---
-		List<Contact> result = new Joey(Contact.class, q, true).search();
-		//---遍历结果---
-		result.forEach(obj -> {
-			System.out.println(obj);
-		});
-	}
-
-	public static void query4() {
-		//---查询条件---
-		List<Condition> q = new ArrayList<>();
-		q.add(new Condition("company_name", new String[]{"厦门"}));
-		//---分页对象---
-		Pagination pagination = new Pagination(1, 30);
-		//---查询结果---
-		List<Contact> result = new Joey(Contact.class, q, true, pagination).search();
-		//---遍历结果---
-		result.forEach(obj -> {
-			System.out.println(obj);
-		});
-	}
-
-	public static void query5() {
-		//---查询条件---
-		List<Condition> q = new ArrayList<>();
-		q.add(new Condition("company_name", new String[]{"厦门"}));
-		//---过滤条件---
-		List<Condition> fq = new ArrayList<>();
-		fq.add(new Condition("province", new String[]{"福建"}));
-		//---排序条件---
-		List<Sort> sort = new ArrayList<>();
-		sort.add(new Sort("id", false));
-		//---分页对象--
-		Pagination pagination = new Pagination(1, 30);
-		//---查询结果---
-		List<Contact> result = new Joey(Contact.class, q, fq, sort, pagination).search();
-		//---遍历结果---
-		result.forEach(obj -> {
-			System.out.println(obj);
-		});
-	}
 
 	/**
 	 * 全量更新索引（带参数）
@@ -92,7 +38,8 @@ public class Example {
 		Map<String, Object> param = new HashMap<>();
 		param.put("index", 0);
 		param.put("size", 10000);
-		System.out.println(new Joey(Contact.class).fullImport(param));
+		String result = Query.fullImport(DesignedProject.class, param);
+		System.out.println(result);
 	}
 
 	/**
@@ -100,7 +47,8 @@ public class Example {
 	 */
 	public static void deltaImport() {
 		Map<String, Object> param = new HashMap<>();
-		System.out.println(new Joey(Contact.class).deltaImport());
+        String result = Query.deltaImport(DesignedProject.class, param);
+        System.out.println(result);
 	}
 
 }
