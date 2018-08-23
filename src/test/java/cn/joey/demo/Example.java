@@ -1,12 +1,11 @@
 package cn.joey.demo;
 
 import java.util.*;
-
-import cn.joey.entity.Contact;
 import cn.joey.entity.DesignedProject;
+import cn.joey.entity.Document;
 import cn.joey.solr.core.Condition;
 import cn.joey.solr.core.Pagination;
-import cn.joey.solr.core.Query;
+import cn.joey.solr.core.Joey;
 import cn.joey.solr.core.Sort;
 
 /**
@@ -24,8 +23,8 @@ public class Example {
         List<Condition> q = new ArrayList<>();
         List<Condition> fq = new ArrayList<>();
         List<Sort> sort = new ArrayList<>();
-        Pagination pagination = new Pagination(2, 30);
-        Query.search(DesignedProject.class, q, fq, sort, pagination).forEach(obj->{
+        Pagination pagination = new Pagination(800, 30);
+        Joey.search(Document.class, q, fq, sort, pagination).forEach(obj->{
             System.out.println(obj);
         });
         System.out.println(pagination);
@@ -38,7 +37,7 @@ public class Example {
 		Map<String, Object> param = new HashMap<>();
 		param.put("index", 0);
 		param.put("size", 10000);
-		String result = Query.fullImport(DesignedProject.class, param);
+		String result = Joey.fullImport(DesignedProject.class, param);
 		System.out.println(result);
 	}
 
@@ -47,7 +46,7 @@ public class Example {
 	 */
 	public static void deltaImport() {
 		Map<String, Object> param = new HashMap<>();
-        String result = Query.deltaImport(DesignedProject.class, param);
+        String result = Joey.deltaImport(DesignedProject.class, param);
         System.out.println(result);
 	}
 

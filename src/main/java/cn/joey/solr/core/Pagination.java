@@ -1,7 +1,5 @@
 package cn.joey.solr.core;
 
-import java.util.List;
-
 /**
  * 分页对象
  * @author dunhanson

@@ -1,7 +1,7 @@
 package cn.joey.entity;
 
 import cn.joey.solr.annotation.Collection;
-import cn.joey.solr.annotation.JoeyField;
+import cn.joey.solr.annotation.Column;
 import java.util.Date;
 
 @Collection(
@@ -15,27 +15,27 @@ import java.util.Date;
 		underlineConvertEnable = false
 )
 public class Contact {
-	@JoeyField(value = "id", isID = true)
+	@Column(value = "id", isID = true)
 	private String id;
-	@JoeyField("company_name")
+	@Column("company_name")
 	private String companyName;
-	@JoeyField("contact_person")
+	@Column("contact_person")
 	private String contactPerson;
-	@JoeyField("position")
+	@Column("position")
 	private String position;
-	@JoeyField("phone_no")
+	@Column("phone_no")
 	private String phoneNo;
-	@JoeyField("mobile_no")
+	@Column("mobile_no")
 	private String mobileNo;
-	@JoeyField("company_addr")
+	@Column("company_addr")
 	private String companyAddr;
-	@JoeyField("province")
+	@Column("province")
 	private String province;
-	@JoeyField("city")
+	@Column("city")
 	private String city;
-	@JoeyField("email")
+	@Column("email")
 	private String email;
-	@JoeyField("create_time")
+	@Column("create_time")
 	private Date createTime;
 	
 	public Contact() {
