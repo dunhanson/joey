@@ -7,6 +7,7 @@ import cn.joey.solr.core.Condition;
 import cn.joey.solr.core.Pagination;
 import cn.joey.solr.core.Joey;
 import cn.joey.solr.core.Sort;
+import cn.joey.solr.core.Store;
 
 /**
  * 搜索条件
@@ -27,6 +28,7 @@ public class Example {
         Joey.search(Document.class, q, fq, sort, pagination).forEach(obj->{
             System.out.println(obj);
         });
+        Store.getInstance().destory();
         System.out.println(pagination);
     }
 

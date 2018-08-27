@@ -4,10 +4,12 @@ import cn.joey.solr.annotation.Collection;
 import cn.joey.solr.annotation.Column;
 import cn.joey.utils.HttpUtils;
 import com.google.common.base.Joiner;
+import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
+import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,17 +67,17 @@ public class Joey<T> {
     }
 
     public static <T> List<T> search(Class<T> clazz) {
-        Term term = new Term(null, null, null, new Pagination(1, 30));
-        return getResult(clazz, term, getSolrInfo(clazz));
+        Item item = new Item(null, null, null, new Pagination(1, 30));
+        return getResult(clazz, item, getBasic(clazz));
     }
 
-    public static <T> List<T> search(Class<T> clazz, Term term) {
-        return getResult(clazz, term, getSolrInfo(clazz));
+    public static <T> List<T> search(Class<T> clazz, Item item) {
+        return getResult(clazz, item, getBasic(clazz));
     }
 
     public static <T> List<T> search(Class<T> clazz, Pagination pagination) {
-        Term term = new Term(null, null, null, pagination);
-        return getResult(clazz, term, getSolrInfo(clazz));
+        Item item = new Item(null, null, null, pagination);
+        return getResult(clazz, item, getBasic(clazz));
     }
 
     public static <T> List<T> search(Class<T> clazz, List<Condition> condition, boolean isQ) {
@@ -86,8 +88,8 @@ public class Joey<T> {
         } else {
             fq = condition;
         }
-        Term term = new Term(q, fq, null, new Pagination(1, 30));
-        return getResult(clazz, term, getSolrInfo(clazz));
+        Item item = new Item(q, fq, null, new Pagination(1, 30));
+        return getResult(clazz, item, getBasic(clazz));
     }
 
     public static <T> List<T> search(Class<T> clazz, List<Condition> condition, boolean isQ, Pagination pagination) {
@@ -98,13 +100,13 @@ public class Joey<T> {
         } else {
             fq = condition;
         }
-        Term term = new Term(q, fq, null, pagination);
-        return getResult(clazz, term, getSolrInfo(clazz));
+        Item item = new Item(q, fq, null, pagination);
+        return getResult(clazz, item, getBasic(clazz));
     }
 
     public static <T> List<T> search(Class<T> clazz, List<Condition> q, List<Condition> fq) {
-        Term term = new Term(q, fq, null, new Pagination(1, 30));
-        return getResult(clazz, term, getSolrInfo(clazz));
+        Item item = new Item(q, fq, null, new Pagination(1, 30));
+        return getResult(clazz, item, getBasic(clazz));
     }
 
     public static <T> List<T> search(Class<T> clazz, List<Condition> condition, boolean isQ, List<Sort> sort) {
@@ -115,18 +117,18 @@ public class Joey<T> {
         } else {
             fq = condition;
         }
-        Term term = new Term(q, fq, sort, new Pagination(1, 30));
-        return getResult(clazz, term, getSolrInfo(clazz));
+        Item item = new Item(q, fq, sort, new Pagination(1, 30));
+        return getResult(clazz, item, getBasic(clazz));
     }
 
     public static <T> List<T> search(Class<T> clazz, List<Condition> q, List<Condition> fq, List<Sort> sort) {
-        Term term = new Term(q, fq, sort, new Pagination(1, 30));
-        return getResult(clazz, term, getSolrInfo(clazz));
+        Item item = new Item(q, fq, sort, new Pagination(1, 30));
+        return getResult(clazz, item, getBasic(clazz));
     }
 
     public static <T> List<T> search(Class<T> clazz, List<Condition> q, List<Condition> fq,
         List<Sort> sort, Pagination pagination) {
-        return getResult(clazz, new Term(q, fq, sort, pagination), getSolrInfo(clazz));
+        return getResult(clazz, new Item(q, fq, sort, pagination), getBasic(clazz));
     }
 
     public static <T> List<T> search(Class<T> clazz, List<Condition> condition, boolean isQ,
@@ -138,27 +140,28 @@ public class Joey<T> {
         } else {
             fq = condition;
         }
-        return getResult(clazz, new Term(q, fq, sort, pagination), getSolrInfo(clazz));
+        return getResult(clazz, new Item(q, fq, sort, pagination), getBasic(clazz));
     }
 
     /**
      * 获取查询结果
      * @param clazz
-     * @param term
+     * @param item
      * @param info
      * @param <T>
      * @return
      */
-    private static <T> List<T> getResult(Class<T> clazz, Term term, Basic info) {
+    private static <T> List<T> getResult(Class<T> clazz, Item item, Basic info) {
         //设置参数
         SolrQuery query = new SolrQuery();
-        query.set("q", getQStr(term.getQ()));
-        query.set("fq", getFQStr(term.getFq()));
-        query.set("sort", getSortStr(term.getSort()));
-        query.setStart(term.getPagination().getStartNum());
-        query.setRows(term.getPagination().getPageSize());
+        query.set("q", getQStr(item.getQ()));
+        query.set("fq", getFQStr(item.getFq()));
+        query.set("sort", getSortStr(item.getSort()));
+        query.setStart(item.getPagination().getStartNum());
+        query.setRows(item.getPagination().getPageSize());
+        setParam(query, item.getParam());
         //高亮设置
-        if(info.isHighlightEnable()) {
+        if(info.isHighlightEnable() && item.getParam() == null) {
             query.setHighlight(true);
             query.addHighlightField(info.getHighlightFieldName());
             query.setHighlightSimplePre(info.getHighlightSimplePre());
@@ -172,21 +175,35 @@ public class Joey<T> {
             throw new RuntimeException(e);
         }
         if(info.isShowTime()) {
-            logger.info("Q:" + getQStr(term.getQ()));
-            logger.info("FQ:" + getFQStr(term.getFq()));
-            logger.info("Sort:" + getSortStr(term.getSort()));
+        	logger.info("---------- Joey Start ----------");
+            logger.info("Q:" + getQStr(item.getQ()));
+            logger.info("FQ:" + getFQStr(item.getFq()));
+            logger.info("Sort:" + getSortStr(item.getSort()));
             logger.info("QTime():" + response.getQTime() + "ms");
             logger.info("ElapsedTime:" + response.getElapsedTime() + "ms");
+            logger.info("---------- Joey End ----------");
         }
         //返回实体对象集合
-        return toEntities(clazz, term.getPagination(), info, response);
+        return toEntities(clazz, item.getPagination(), info, response);
     }
 
     /**
+     * 设置其它参数
+     * @param param
+     */
+    private static void setParam(SolrQuery query, Map<String, String> param) {
+    	if(param != null) {
+        	param.keySet().forEach(key->{
+        		query.set(key, param.get(key));
+        	});	
+    	}
+	}
+
+	/**
      * 初始化参数
      * @param clazz
      */
-    private static <T> Basic getSolrInfo(Class<T> clazz) {
+    public static <T> Basic getBasic(Class<T> clazz) {
         loadConfiguration();
         Basic solrInfo = new Basic();
         if(properties == null) {//注解方式
@@ -254,6 +271,9 @@ public class Joey<T> {
                 String name = condition.getName();
                 String[] values = condition.getValues();
                 boolean fuzzy = condition.isFuzzy();
+                if(StringUtils.isEmpty(name)) {
+                	return values[0];
+                }
                 if(values != null && values.length > 0) {
                     qStr.append(LEFT_PARENTHESIS);
                     for(int j = 0; j < values.length; j++) {
@@ -363,7 +383,7 @@ public class Joey<T> {
      */
     private static String getFuzzyStr(String name, String value, boolean fuzzy) {
         if(fuzzy && !StringUtils.isEmpty(value)) {
-            value = STAR + value + STAR;
+            //value = STAR + value + STAR;
             return name + COLON + value;
         }
         return name + COLON + QUOTE + value + QUOTE;
@@ -471,9 +491,8 @@ public class Joey<T> {
         QueryResponse response, String idFileName, String highlightFieldName) {
         Map<String, Map<String, List<String>>> highlighting = response.getHighlighting();
         String id = (String) document.get(idFileName);
-        Map<String, List<String>> map = highlighting.get(id);
-        if(map != null){
-            List<String> list = map.get(highlightFieldName);
+        if(highlighting != null && highlighting.get(id) != null){
+            List<String> list = highlighting.get(id).get(highlightFieldName);
             if(list != null && list.size() > 0){
                 return list.get(0);
             }
@@ -607,7 +626,7 @@ public class Joey<T> {
      */
     public static <T> String fullImport(Class<T> clazz) {
         try {
-            Basic info = getSolrInfo(clazz);
+            Basic info = getBasic(clazz);
             return dataImport(info.getBaseSolrUrl(), info.getDataimportEntity(), FULL_IMPORT, new HashMap<>());
         } catch (Exception e) {
         	logger.error(e.getLocalizedMessage());
@@ -624,7 +643,7 @@ public class Joey<T> {
     public static <T> String fullImport(Class<T> clazz, Map<String, Object> param) {
         try {
             //执行更新索引并返回结果
-            Basic info = getSolrInfo(clazz);
+            Basic info = getBasic(clazz);
             return dataImport(info.getBaseSolrUrl(), info.getDataimportEntity(), FULL_IMPORT, param);
         } catch (Exception e) {
         	logger.error(e.getLocalizedMessage());
@@ -641,7 +660,7 @@ public class Joey<T> {
     public static <T> String deltaImport(Class<T> clazz, Map<String, Object> param) {
         try {
             //执行更新索引并返回结果
-            Basic info = getSolrInfo(clazz);
+            Basic info = getBasic(clazz);
             return dataImport(info.getBaseSolrUrl(), info.getDataimportEntity(), DELTA_IMPORT, param);
         } catch (Exception e) {
         	logger.error(e.getLocalizedMessage());
@@ -656,12 +675,74 @@ public class Joey<T> {
     public static <T> String deltaImport(Class<T> clazz) {
         try {
             //执行更新索引并返回结果
-            Basic info = getSolrInfo(clazz);
+            Basic info = getBasic(clazz);
             return dataImport(info.getBaseSolrUrl(), info.getDataimportEntity(), DELTA_IMPORT, new HashMap<>());
         } catch (Exception e) {
         	logger.error(e.getLocalizedMessage());
             throw new RuntimeException(e);
         }
     }
+    
+    /**
+     * 删除单个索引
+     * @param clazz
+     * @param id
+     */
+    public static <T> void deleteIndex(Class<T> clazz, String id) {
+    	try {
+        	Basic info = getBasic(clazz);
+			Store.getInstance().getSolrClient(info).deleteById(id);
+		} catch (Exception e) {
+			logger.error(e.getLocalizedMessage());
+			throw new RuntimeException(e);
+		}
+    }
 
+    /**
+     * 删除多个索引
+     * @param clazz
+     * @param ids
+     */
+    public static <T> void deleteIndex(Class<T> clazz, List<String> ids) {
+    	try {
+        	Basic info = getBasic(clazz);
+			Store.getInstance().getSolrClient(info).deleteById(ids);
+		} catch (Exception e) {
+			logger.error(e.getLocalizedMessage());
+			throw new RuntimeException(e);
+		}
+    }
+    
+    /**
+     * 更新单个索引
+     * @param clazz
+     * @param document
+     */
+    public static <T> void upadteIndex(Class<T> clazz, SolrInputDocument document) {
+    	try {
+        	SolrClient client = Store.getInstance().getSolrClient(getBasic(clazz));
+			client.add(document);
+			client.commit();
+		} catch (Exception e) {
+			logger.error(e.getLocalizedMessage());
+			throw new RuntimeException(e);
+		}
+    }
+    
+    /**
+     * 更新多个索引
+     * @param clazz
+     * @param documents
+     */
+    public static <T> void upadteIndex(Class<T> clazz, List<SolrInputDocument> documents) {
+    	try {
+        	SolrClient client = Store.getInstance().getSolrClient(getBasic(clazz));
+			client.add(documents);
+			client.commit();
+		} catch (Exception e) {
+			logger.error(e.getLocalizedMessage());
+			throw new RuntimeException(e);
+		}
+    }
+    
 }

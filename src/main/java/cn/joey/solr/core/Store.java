@@ -37,33 +37,33 @@ public class Store {
      * 获取SolrClient对象
      * @return
      */
-    public SolrClient getSolrClient(Basic solrInfo) {
-        SolrClient client = store.get(solrInfo.getCollection());
+    public SolrClient getSolrClient(Basic basic) {
+        SolrClient client = store.get(basic.getCollection());
         //判断SolrClient是否有效
         if(client == null || !isValid(client)) {
-            return newSolrClient(solrInfo);
+            return newSolrClient(basic);
         }
         return client;
     }
 
     /**
      * 创建SolrClient对象
-     * @param solrInfo
+     * @param basic
      * @return
      */
-    public SolrClient newSolrClient(Basic solrInfo) {
-        String collection = solrInfo.getCollection();
-        String zkHost = solrInfo.getZkHost();
-        int zkClientTimeout = solrInfo.getZkClientTimeout();
-        int zkConnectTimeout = solrInfo.getZkConnectTimeout();
-        if(solrInfo.isCluster()) { //集群模式
+    public SolrClient newSolrClient(Basic basic) {
+        String collection = basic.getCollection();
+        String zkHost = basic.getZkHost();
+        int zkClientTimeout = basic.getZkClientTimeout();
+        int zkConnectTimeout = basic.getZkConnectTimeout();
+        if(basic.isCluster()) { //集群模式
             CloudSolrClient cloudSolrClient = new CloudSolrClient.Builder().withZkHost(zkHost).build();
             if(zkClientTimeout > 0) cloudSolrClient.setZkClientTimeout(zkClientTimeout);
             if(zkConnectTimeout > 0) cloudSolrClient.setZkConnectTimeout(zkConnectTimeout);
             cloudSolrClient.setDefaultCollection(collection);
             store.put(collection, cloudSolrClient);
         } else { //单机模式
-            store.put(collection, new HttpSolrClient.Builder(solrInfo.getBaseSolrUrl()).build());
+            store.put(collection, new HttpSolrClient.Builder(basic.getBaseSolrUrl()).build());
         }
         return store.get(collection);
     }
@@ -89,7 +89,8 @@ public class Store {
     public void destory() {
         store.keySet().forEach(key->{
             try {
-                store.get(key).close();
+            	SolrClient client = store.get(key);
+            	client.close();	
             } catch (IOException e) {
                 logger.warn(e.getMessage());
             }

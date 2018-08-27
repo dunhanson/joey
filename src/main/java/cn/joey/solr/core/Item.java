@@ -1,18 +1,20 @@
 package cn.joey.solr.core;
 
 import java.util.List;
+import java.util.Map;
 
-public class Term {
+public class Item {
     private List<Condition> q;
     private List<Condition> fq;
     private List<Sort> sort;
+    private Map<String, String> param;
     private Pagination pagination;
 
-    public Term() {
+    public Item() {
         pagination = new Pagination(1, 30);
     }
 
-    public Term(List<Condition> q, List<Condition> fq, List<Sort> sort, Pagination pagination) {
+    public Item(List<Condition> q, List<Condition> fq, List<Sort> sort, Pagination pagination) {
         this.q = q;
         this.fq = fq;
         this.sort = sort;
@@ -51,13 +53,17 @@ public class Term {
         this.pagination = pagination;
     }
 
-    @Override
-    public String toString() {
-        return "QueryTerm{" +
-                "q=" + q +
-                ", fq=" + fq +
-                ", sort=" + sort +
-                ", pagination=" + pagination +
-                '}';
-    }
+    public Map<String, String> getParam() {
+		return param;
+	}
+
+	public void setParam(Map<String, String> param) {
+		this.param = param;
+	}
+
+	@Override
+	public String toString() {
+		return "Item [q=" + q + ", fq=" + fq + ", sort=" + sort + ", param=" + param + ", pagination=" + pagination
+				+ "]";
+	}
 }

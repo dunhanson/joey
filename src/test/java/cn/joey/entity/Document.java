@@ -1,6 +1,5 @@
 package cn.joey.entity;
 
-import cn.joey.solr.annotation.Column;
 import java.util.Date;
 
 public class Document {
@@ -8,10 +7,9 @@ public class Document {
     private String chnldesc;
     private String city;
     private String docchannel;
-    private String pageTime;
+    private String page_time;
     private String industry;
     private String province;
-    @Column("page_time")
     private Date publishtime;
     private String qcodes;
     private String websourcename;
@@ -53,13 +51,6 @@ public class Document {
         this.docchannel = docchannel;
     }
 
-    public String getPageTime() {
-        return pageTime;
-    }
-
-    public void setPageTime(String pageTime) {
-        this.pageTime = pageTime;
-    }
 
     public String getIndustry() {
         return industry;
@@ -109,20 +100,22 @@ public class Document {
         this.doctitle = doctitle;
     }
 
-    @Override
-    public String toString() {
-        return "Document{" +
-                "id='" + id + '\'' +
-                ", chnldesc='" + chnldesc + '\'' +
-                ", city='" + city + '\'' +
-                ", docchannel='" + docchannel + '\'' +
-                ", pageTime='" + pageTime + '\'' +
-                ", industry='" + industry + '\'' +
-                ", province='" + province + '\'' +
-                ", publishtime=" + publishtime +
-                ", qcodes='" + qcodes + '\'' +
-                ", websourcename='" + websourcename + '\'' +
-                ", doctitle='" + doctitle + '\'' +
-                '}';
-    }
+	public String getPage_time() {
+		return page_time;
+	}
+
+	public void setPage_time(String page_time) {
+		this.page_time = page_time;
+	}
+
+	@Override
+	public String toString() {
+		return "Document [id=" + id + ", chnldesc=" + chnldesc + ", city=" + city + ", docchannel=" + docchannel
+				+ ", page_time=" + page_time + ", industry=" + industry + ", province=" + province + ", publishtime="
+				+ publishtime + ", qcodes=" + qcodes + ", websourcename=" + websourcename + ", doctitle=" + doctitle
+				+ "]";
+	}
+	
+	
+
 }
