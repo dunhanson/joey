@@ -3,7 +3,8 @@ package cn.joey.solr.core;
 import cn.joey.solr.annotation.Collection;
 import cn.joey.solr.annotation.Column;
 import cn.joey.utils.HttpUtils;
-import com.google.common.base.Joiner;
+import cn.joey.utils.LogUtils;
+
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.response.QueryResponse;
@@ -11,13 +12,11 @@ import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Field;
-import java.net.URLEncoder;
 import java.util.*;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -59,7 +58,7 @@ public class Joey<T> {
     private static final String HIGHLIGHT_FIELDNAME = "highlightFieldName";
     private static final String HIGHTLIGHT_SIMPLEPRE = "highlightSimplePre";
     private static final String HIGHLIGHT_SIMPLEPOST = "highlightSimplePost";
-    private static Logger logger = LoggerFactory.getLogger(Joey.class);
+    private static Logger logger = LogUtils.getLogger(Joey.class);
     private static Properties properties = null;
 
     private Joey() {
@@ -254,7 +253,7 @@ public class Joey<T> {
                 return collection;
             }
         }
-        logger.error("未能匹配到collection");
+        logger.warning("未能匹配到collection");
         throw new RuntimeException("未能匹配到collection");
     }
 
@@ -435,7 +434,7 @@ public class Joey<T> {
                 setValue(field, value, entity);
             }
         } catch (Exception e) {
-        	logger.error(e.getLocalizedMessage());
+        	logger.warning(e.getLocalizedMessage());
             throw new RuntimeException(e);
         }
         return entity;
@@ -477,7 +476,7 @@ public class Joey<T> {
                 field.set(entity, value);
             }
         } catch (Exception e) {
-        	logger.error(e.getLocalizedMessage());
+        	logger.warning(e.getLocalizedMessage());
             throw new RuntimeException(e);
         }
     }
@@ -545,13 +544,17 @@ public class Joey<T> {
         String formData = "";
         try {
             if (map != null && map.size() > 0) {
-                formData = Joiner.on("&").withKeyValueSeparator("=").join(map);
-                if (isURLEncoder) {
-                    formData = URLEncoder.encode(formData, "UTF-8");
-                }
+        		StringBuffer sb = new StringBuffer();
+        		map.forEach((k, v)->{
+        			sb.append(k);
+        			sb.append("=");
+        			sb.append(v);
+        			sb.append("&");
+        		});
+        		formData = sb.deleteCharAt(sb.lastIndexOf("&")).toString();
             }
         } catch (Exception e) {
-        	logger.error(e.getLocalizedMessage());
+        	logger.warning(e.getLocalizedMessage());
             throw new RuntimeException(e);
         }
         return formData;
@@ -569,7 +572,7 @@ public class Joey<T> {
                 properties.load(new InputStreamReader(in, "UTF-8"));
             }
         } catch (Exception e) {
-        	logger.error(e.getLocalizedMessage());
+        	logger.warning(e.getLocalizedMessage());
             throw new RuntimeException(e);
         }
     }
@@ -614,7 +617,7 @@ public class Joey<T> {
             //执行更新索引并返回结果
             return HttpUtils.httpPost(baseSolrUrl + "/dataimport", mapToFormData(param, false));
         } catch (Exception e) {
-        	logger.error(e.getLocalizedMessage());
+        	logger.warning(e.getLocalizedMessage());
             throw new RuntimeException(e);
         }
     }
@@ -629,7 +632,7 @@ public class Joey<T> {
             Basic info = getBasic(clazz);
             return dataImport(info.getBaseSolrUrl(), info.getDataimportEntity(), FULL_IMPORT, new HashMap<>());
         } catch (Exception e) {
-        	logger.error(e.getLocalizedMessage());
+        	logger.warning(e.getLocalizedMessage());
             throw new RuntimeException(e);
         }
     }
@@ -646,7 +649,7 @@ public class Joey<T> {
             Basic info = getBasic(clazz);
             return dataImport(info.getBaseSolrUrl(), info.getDataimportEntity(), FULL_IMPORT, param);
         } catch (Exception e) {
-        	logger.error(e.getLocalizedMessage());
+        	logger.warning(e.getLocalizedMessage());
             throw new RuntimeException(e);
         }
     }
@@ -663,7 +666,7 @@ public class Joey<T> {
             Basic info = getBasic(clazz);
             return dataImport(info.getBaseSolrUrl(), info.getDataimportEntity(), DELTA_IMPORT, param);
         } catch (Exception e) {
-        	logger.error(e.getLocalizedMessage());
+        	logger.warning(e.getLocalizedMessage());
             throw new RuntimeException(e);
         }
     }
@@ -678,7 +681,7 @@ public class Joey<T> {
             Basic info = getBasic(clazz);
             return dataImport(info.getBaseSolrUrl(), info.getDataimportEntity(), DELTA_IMPORT, new HashMap<>());
         } catch (Exception e) {
-        	logger.error(e.getLocalizedMessage());
+        	logger.warning(e.getLocalizedMessage());
             throw new RuntimeException(e);
         }
     }
@@ -693,7 +696,7 @@ public class Joey<T> {
         	Basic info = getBasic(clazz);
 			Store.getInstance().getSolrClient(info).deleteById(id);
 		} catch (Exception e) {
-			logger.error(e.getLocalizedMessage());
+			logger.warning(e.getLocalizedMessage());
 			throw new RuntimeException(e);
 		}
     }
@@ -708,7 +711,7 @@ public class Joey<T> {
         	Basic info = getBasic(clazz);
 			Store.getInstance().getSolrClient(info).deleteById(ids);
 		} catch (Exception e) {
-			logger.error(e.getLocalizedMessage());
+			logger.warning(e.getLocalizedMessage());
 			throw new RuntimeException(e);
 		}
     }
@@ -724,7 +727,7 @@ public class Joey<T> {
 			client.add(document);
 			client.commit();
 		} catch (Exception e) {
-			logger.error(e.getLocalizedMessage());
+			logger.warning(e.getLocalizedMessage());
 			throw new RuntimeException(e);
 		}
     }
@@ -740,7 +743,7 @@ public class Joey<T> {
 			client.add(documents);
 			client.commit();
 		} catch (Exception e) {
-			logger.error(e.getLocalizedMessage());
+			logger.warning(e.getLocalizedMessage());
 			throw new RuntimeException(e);
 		}
     }
