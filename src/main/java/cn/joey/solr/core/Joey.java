@@ -179,7 +179,7 @@ public class Joey<T> {
             logger.info("Q:" + getQStr(item.getQ()));
             logger.info("FQ:" + getFQStr(item.getFq()));
             logger.info("Sort:" + getSortStr(item.getSort()));
-            logger.info("QTime():" + response.getQTime() + "ms");
+            logger.info("QTime:" + response.getQTime() + "ms");
             logger.info("ElapsedTime:" + response.getElapsedTime() + "ms");
             logger.info("---------- Joey End ----------");
         }
@@ -223,7 +223,7 @@ public class Joey<T> {
             solrInfo.setShowTime(collection.showTime());
         } else {//配置方式
             String collection = getCollection(clazz, properties);
-            solrInfo.setCollection(getCollection(clazz, properties));
+            solrInfo.setCollection(collection);
             solrInfo.setCluster(getProperty(collection, CLUSTER, "false").equals(TRUE));
             solrInfo.setBaseSolrUrl(getProperty(collection, BASESOLR_URL));
             solrInfo.setZkHost(getProperty(collection, ZKHOST));
