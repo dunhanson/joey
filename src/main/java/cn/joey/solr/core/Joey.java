@@ -74,6 +74,7 @@ public class Joey<T> {
     }
 
     public static <T> List<T> search(Class<T> clazz, Pagination pagination) {
+    	if(pagination == null) pagination = new Pagination(1, 30);
         Item item = new Item(null, null, null, pagination);
         return getResult(clazz, item, getBasic(clazz));
     }
@@ -93,6 +94,7 @@ public class Joey<T> {
     public static <T> List<T> search(Class<T> clazz, List<Condition> condition, boolean isQ, Pagination pagination) {
         List<Condition> q = null;
         List<Condition> fq = null;
+        if(pagination == null) pagination = new Pagination(1, 30);
         if(isQ) {
             q = condition;
         } else {
@@ -126,11 +128,13 @@ public class Joey<T> {
 
     public static <T> List<T> search(Class<T> clazz, List<Condition> q, List<Condition> fq,
         List<Sort> sort, Pagination pagination) {
+    	if(pagination == null) pagination = new Pagination(1, 30);
         return getResult(clazz, new Item(q, fq, sort, pagination), getBasic(clazz));
     }
 
     public static <T> List<T> search(Class<T> clazz, List<Condition> condition, boolean isQ,
         List<Sort> sort, Pagination pagination) {
+    	if(pagination == null) pagination = new Pagination(1, 30);
         List<Condition> q = null;
         List<Condition> fq = null;
         if(isQ) {
