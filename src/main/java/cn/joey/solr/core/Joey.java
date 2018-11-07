@@ -543,7 +543,7 @@ public class Joey<T> {
      * @param isURLEncoder
      * @return
      */
-    private static String mapToFormData(Map<String, Object> map, boolean isURLEncoder) {
+    private static String mapToFormData(Map<String, Object> map) {
         String formData = "";
         try {
             if (map != null && map.size() > 0) {
@@ -618,7 +618,7 @@ public class Joey<T> {
             param.put("entity", entity);
             param.put("command", importType);
             //执行更新索引并返回结果
-            return HttpUtils.httpPost(baseSolrUrl + "/dataimport", mapToFormData(param, false));
+            return HttpUtils.httpPost(baseSolrUrl + "/dataimport", mapToFormData(param));
         } catch (Exception e) {
         	logger.error(e.getLocalizedMessage());
             throw new RuntimeException(e);
@@ -690,6 +690,29 @@ public class Joey<T> {
     }
     
     /**
+     * 查看创建索引状态
+     * @param clazz
+     * @return
+     */
+    public static <T> String statusImport(Class<T> clazz, Long times) {
+        try {
+            Basic info = getBasic(clazz);
+            String baseSolrUrl = info.getBaseSolrUrl();
+            //执行参数
+        	Map<String, Object> param = new HashMap<>();
+        	param.put("_", times);
+            param.put("command", "status");
+            param.put("indent", "on");
+            param.put("wt", "json");
+            //执行更新索引并返回结果
+            return HttpUtils.httpPost(baseSolrUrl + "/dataimport", mapToFormData(param));
+        } catch (Exception e) {
+        	logger.error(e.getLocalizedMessage());
+            throw new RuntimeException(e);
+        }
+    }
+    
+    /**
      * 删除单个索引
      * @param clazz
      * @param id
@@ -750,5 +773,9 @@ public class Joey<T> {
 			throw new RuntimeException(e);
 		}
     }
+    
+    public static void main(String[] args) {
+		System.out.println(new Date().getTime());
+	}
     
 }
