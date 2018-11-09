@@ -93,7 +93,7 @@ public class HttpUtils {
 			String paramStr = URLEncodedUtils.format(params, "UTF-8");
 			//检查参数
 			if(StringUtils.isNotBlank(paramStr)) {
-				url += (url + "?" + paramStr);
+				url = url + "?" + paramStr;
 			}
 		}
 		HttpGet httpGet = new HttpGet(url);
