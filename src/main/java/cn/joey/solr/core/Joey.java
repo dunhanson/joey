@@ -2,6 +2,7 @@ package cn.joey.solr.core;
 
 import cn.joey.solr.annotation.Collection;
 import cn.joey.solr.annotation.Column;
+import cn.joey.utils.BeanUtils;
 import cn.joey.utils.HttpUtils;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrQuery;
@@ -437,7 +438,7 @@ public class Joey<T> {
                 setValue(field, value, entity);
             }
         } catch (Exception e) {
-        	logger.error(e.getLocalizedMessage());
+        	logger.error(e.getMessage());
             throw new RuntimeException(e);
         }
         return entity;
@@ -479,7 +480,7 @@ public class Joey<T> {
                 field.set(entity, value);
             }
         } catch (Exception e) {
-        	logger.error(e.getLocalizedMessage());
+        	logger.error(e.getMessage());
             throw new RuntimeException(e);
         }
     }
@@ -536,33 +537,7 @@ public class Joey<T> {
         }
         return "id";
     }
-
-    /**
-     * Map转URL参数
-     * @param map
-     * @param isURLEncoder
-     * @return
-     */
-    private static String mapToFormData(Map<String, Object> map) {
-        String formData = "";
-        try {
-            if (map != null && map.size() > 0) {
-        		StringBuffer sb = new StringBuffer();
-        		map.forEach((k, v)->{
-        			sb.append(k);
-        			sb.append("=");
-        			sb.append(v);
-        			sb.append("&");
-        		});
-        		formData = sb.deleteCharAt(sb.lastIndexOf("&")).toString();
-            }
-        } catch (Exception e) {
-        	logger.error(e.getLocalizedMessage());
-            throw new RuntimeException(e);
-        }
-        return formData;
-    }
-
+    
     /**
      * 读取配置文件
      * @return
@@ -575,7 +550,7 @@ public class Joey<T> {
                 properties.load(new InputStreamReader(in, "UTF-8"));
             }
         } catch (Exception e) {
-        	logger.error(e.getLocalizedMessage());
+        	logger.error(e.getMessage());
             throw new RuntimeException(e);
         }
     }
@@ -604,42 +579,68 @@ public class Joey<T> {
         key = collection + DOT + key;
         return properties.getProperty(key, defaultValue);
     }
-
-
+    
     /**
-     * 更新索引
-     * @param baseSolrUrl solr地址
-     * @param entity 实体名
-     * @param importType 导入类型
+     * 查看创建索引状态
+     * @param baseSolrUrl
+     * @param times
      * @return
      */
-    private static String dataImport(String baseSolrUrl, String entity, String importType, Map<String, Object> param) {
+    public static <T> String statusImport(String baseSolrUrl, Long times) {
+        //封装参数
+    	Map<String, Object> param = new HashMap<>();
+    	param.put("_", times == null ? System.currentTimeMillis() : times);
+        param.put("command", "status");
+        param.put("indent", "on");
+        param.put("wt", "json");
+        //执行请求并返回结果
+        return HttpUtils.httpGet(baseSolrUrl + "/dataimport", param);
+    }
+    
+    /**
+     * 查看创建索引状态
+     * @param clazz
+     * @param time
+     * @return
+     */
+    public static <T> String statusImport(Class<T> clazz, Long time) {
+    	return statusImport(getBasic(clazz).getBaseSolrUrl(), time);
+    }    
+    
+    /**
+     * 数据导入
+     * @param baseSolrUrl
+     * @param param
+     * @param extra
+     * @return
+     */
+    public static String dataImport(String baseSolrUrl, DataImportParam param, Map<String, Object> extra) {
         try {
-            param.put("entity", entity);
-            param.put("command", importType);
-            //执行更新索引并返回结果
-            return HttpUtils.httpPost(baseSolrUrl + "/dataimport", mapToFormData(param));
+        	//转换map集合
+        	Map<String, Object> mapParam = BeanUtils.toMap(param);
+        	//追加额外参数
+        	mapParam.putAll(extra);
+        	//执行请求
+        	long time = System.currentTimeMillis();
+        	baseSolrUrl += "/dataimport?_=TIME&indent=on&wt=json";
+        	baseSolrUrl = baseSolrUrl.replaceAll("TIME", String.valueOf(time));
+            return HttpUtils.httpPost(baseSolrUrl, mapParam);
         } catch (Exception e) {
-        	logger.error(e.getLocalizedMessage());
+        	logger.error(e.getMessage());
             throw new RuntimeException(e);
         }
     }
-
-
+    
     /**
-     * 全量更新索引
+     * 数据导入
+     * @param baseSolrUrl
+     * @param param
      * @return
      */
-    public static <T> String fullImport(Class<T> clazz) {
-        try {
-            Basic info = getBasic(clazz);
-            return dataImport(info.getBaseSolrUrl(), info.getDataimportEntity(), FULL_IMPORT, new HashMap<>());
-        } catch (Exception e) {
-        	logger.error(e.getLocalizedMessage());
-            throw new RuntimeException(e);
-        }
+    public static String dataImport(String baseSolrUrl, DataImportParam param) {
+        return dataImport(baseSolrUrl, param, null);
     }
-
+    
     /**
      * 全量更新索引
      * @param param 自定义参数
@@ -648,13 +649,23 @@ public class Joey<T> {
      */
     public static <T> String fullImport(Class<T> clazz, Map<String, Object> param) {
         try {
-            //执行更新索引并返回结果
             Basic info = getBasic(clazz);
-            return dataImport(info.getBaseSolrUrl(), info.getDataimportEntity(), FULL_IMPORT, param);
+            String command = FULL_IMPORT;
+            String core = info.getCollection();
+            String entity = info.getDataimportEntity();
+            return dataImport(info.getBaseSolrUrl(), new DataImportParam(command, core, entity), param);
         } catch (Exception e) {
-        	logger.error(e.getLocalizedMessage());
+        	logger.error(e.getMessage());
             throw new RuntimeException(e);
         }
+    }
+    
+    /**
+     * 全量更新索引
+     * @return
+     */
+    public static <T> String fullImport(Class<T> clazz) {
+        return fullImport(clazz, null);
     }
 
     /**
@@ -665,11 +676,13 @@ public class Joey<T> {
      */
     public static <T> String deltaImport(Class<T> clazz, Map<String, Object> param) {
         try {
-            //执行更新索引并返回结果
             Basic info = getBasic(clazz);
-            return dataImport(info.getBaseSolrUrl(), info.getDataimportEntity(), DELTA_IMPORT, param);
+            String command = DELTA_IMPORT;
+            String core = info.getCollection();
+            String entity = info.getDataimportEntity();
+            return dataImport(info.getBaseSolrUrl(), new DataImportParam(command, core, entity), param);
         } catch (Exception e) {
-        	logger.error(e.getLocalizedMessage());
+        	logger.error(e.getMessage());
             throw new RuntimeException(e);
         }
     }
@@ -679,37 +692,7 @@ public class Joey<T> {
      * @return
      */
     public static <T> String deltaImport(Class<T> clazz) {
-        try {
-            //执行更新索引并返回结果
-            Basic info = getBasic(clazz);
-            return dataImport(info.getBaseSolrUrl(), info.getDataimportEntity(), DELTA_IMPORT, new HashMap<>());
-        } catch (Exception e) {
-        	logger.error(e.getLocalizedMessage());
-            throw new RuntimeException(e);
-        }
-    }
-    
-    /**
-     * 查看创建索引状态
-     * @param clazz
-     * @return
-     */
-    public static <T> String statusImport(Class<T> clazz, Long times) {
-        try {
-            Basic info = getBasic(clazz);
-            String baseSolrUrl = info.getBaseSolrUrl();
-            //执行参数
-        	Map<String, Object> param = new HashMap<>();
-        	param.put("_", times);
-            param.put("command", "status");
-            param.put("indent", "on");
-            param.put("wt", "json");
-            //执行更新索引并返回结果
-            return HttpUtils.httpPost(baseSolrUrl + "/dataimport", mapToFormData(param));
-        } catch (Exception e) {
-        	logger.error(e.getLocalizedMessage());
-            throw new RuntimeException(e);
-        }
+        return deltaImport(clazz, null);
     }
     
     /**
@@ -722,7 +705,7 @@ public class Joey<T> {
         	Basic info = getBasic(clazz);
 			Store.getInstance().getSolrClient(info).deleteById(id);
 		} catch (Exception e) {
-			logger.error(e.getLocalizedMessage());
+			logger.error(e.getMessage());
 			throw new RuntimeException(e);
 		}
     }
@@ -737,7 +720,7 @@ public class Joey<T> {
         	Basic info = getBasic(clazz);
 			Store.getInstance().getSolrClient(info).deleteById(ids);
 		} catch (Exception e) {
-			logger.error(e.getLocalizedMessage());
+			logger.error(e.getMessage());
 			throw new RuntimeException(e);
 		}
     }
@@ -753,7 +736,7 @@ public class Joey<T> {
 			client.add(document);
 			client.commit();
 		} catch (Exception e) {
-			logger.error(e.getLocalizedMessage());
+			logger.error(e.getMessage());
 			throw new RuntimeException(e);
 		}
     }
@@ -769,13 +752,9 @@ public class Joey<T> {
 			client.add(documents);
 			client.commit();
 		} catch (Exception e) {
-			logger.error(e.getLocalizedMessage());
+			logger.error(e.getMessage());
 			throw new RuntimeException(e);
 		}
     }
-    
-    public static void main(String[] args) {
-		System.out.println(new Date().getTime());
-	}
-    
+
 }

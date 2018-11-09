@@ -8,7 +8,10 @@ import java.net.InetAddress;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.UnknownHostException;
+import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Http请求工具类
@@ -16,7 +19,8 @@ import javax.servlet.http.HttpServletRequest;
  * @since 2017.12.15
  */
 public class HttpUtils {
-
+	private static Logger logger = LoggerFactory.getLogger(HttpUtils.class);
+	
 	/**
 	 * 发送JSON请求
 	 * @param url 网络地址
@@ -124,13 +128,110 @@ public class HttpUtils {
 	}
 	
 	/**
-	 * 发送无参数POST请求
+	 * 发送POST请求
+	 * @param url
+	 * @param obj
+	 * @return
+	 */
+	public static String httpPost(String url, Map<String, Object> map) {
+		return httpPost(url, toFormData(map));
+	}
+	
+	/**
+	 * 发送GET请求
+	 * @param url 网络地址
+	 * @param param 请求字符串
+	 * @return 响应结果
+	 */
+	public static String httpGet(String url, String param) {
+		HttpURLConnection conn = null;
+		OutputStream out = null;
+		InputStream in = null;
+		String result = "";
+		String length = "0";
+		//参数判断
+		if(param != null && param.length() > 0) {
+			url += ("?" + param);
+			length = String.valueOf(param.getBytes().length);
+		}
+		try {
+	        // 建立http连接
+	        conn = getHttpURLConnection(url);
+	        // 设置不用缓存
+	        conn.setUseCaches(false);
+	        // 设置允许输出
+	        conn.setDoOutput(true);
+	        conn.setDoInput(true);
+	        // 设置传递方式
+	        conn.setRequestMethod("GET");
+	        // 设置维持长连接
+	        conn.setRequestProperty("Connection", "keep-alive");
+	        // 设置文件长度
+	        conn.setRequestProperty("Content-Length", length);
+	        // 设置请求信息类型:
+	        conn.setRequestProperty("Content-type", "text/plain;charset=utf-8");
+	        // 设置客户端接受信息类型
+	        conn.setRequestProperty("Accept", "application/json,text/plain,*/*");	        
+	        // 开始连接请求
+	        conn.connect();
+	        // 获取连接输出流
+	        out = conn.getOutputStream();     
+	        // 刷新
+	        out.flush();
+	        // 请求返回的状态
+	        if (conn.getResponseCode() == 200) {
+	            // 请求返回的数据
+	        	in = conn.getInputStream();
+	            byte[] data = new byte[in.available()];
+	            in.read(data);
+	            result = new String(data);
+	        }    			
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		} finally {
+			close(conn, out, in);
+		}
+		return result;
+	}
+	
+	/**
+	 * 发送GET请求
 	 * @param url 网络地址
 	 * @return 响应结果
 	 */
-	public static String httpPost(String url) {
-		return httpPost(url, "");
-	}	
+	public static String httpGet(String url) {
+		return httpGet(url, "");
+	}
+	
+	public static String httpGet(String url, Map<String, Object> param) {
+		return httpGet(url, toFormData(param));
+	}
+	
+    /**
+     * Map转URL参数
+     * @param map
+     * @param isURLEncoder
+     * @return
+     */
+    private static String toFormData(Map<String, Object> map) {
+        String formData = "";
+        try {
+            if (map != null && map.size() > 0) {
+        		StringBuffer sb = new StringBuffer();
+        		map.forEach((k, v)->{
+        			sb.append(k);
+        			sb.append("=");
+        			sb.append(v);
+        			sb.append("&");
+        		});
+        		formData = sb.deleteCharAt(sb.lastIndexOf("&")).toString();
+            }
+        } catch (Exception e) {
+        	logger.error(e.getLocalizedMessage());
+            throw new RuntimeException(e);
+        }
+        return formData;
+    }
 	
 	/**
 	 * 获取ip地址
