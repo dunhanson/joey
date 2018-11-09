@@ -146,20 +146,16 @@ public class Joey<T> {
         return getResult(clazz, new Item(q, fq, sort, pagination), getBasic(clazz));
     }
     
-    /**
-     * 原生查询-Q
-     * @param baseSolrUrl
-     * @param q
-     * @return
-     */
-    public static String search(String baseSolrUrl, String q) {
-    	String url = baseSolrUrl + "/select";
-    	Map<String, Object> param = new HashMap<>();
-    	param.put("_", System.currentTimeMillis());
-    	param.put("q", q);
-    	return HttpUtils.httpGet(url, param);
+    
+    public static String search(String completeUrl) {
+    	return HttpUtils.httpGet(completeUrl);
     }
 
+    public static String search(String baseSolrUrl, Map<String, Object> param) {
+    	String url = baseSolrUrl + "/select";
+    	return HttpUtils.httpGet(url, param);
+    }
+    
     /**
      * 获取查询结果
      * @param clazz
