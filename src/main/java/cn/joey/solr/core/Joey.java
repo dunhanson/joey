@@ -626,6 +626,8 @@ public class Joey<T> {
      */
     public static String dataImport(String baseSolrUrl, DataImportParam param, Map<String, Object> extra) {
         try {
+        	//防止空指针异常
+        	extra = extra == null ? new HashMap<>() : extra;
         	//转换map集合
         	Map<String, Object> mapParam = BeanUtils.toMap(param);
         	//追加额外参数
