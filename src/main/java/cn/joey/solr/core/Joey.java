@@ -288,14 +288,18 @@ public class Joey<T> {
                 	return values[0];
                 }
                 if(values != null && values.length > 0) {
-                    qStr.append(LEFT_PARENTHESIS);
-                    for(int j = 0; j < values.length; j++) {
-                        qStr.append(getFuzzyStr(name, values[j], fuzzy));
-                        if(j < values.length - 1) {
-                            qStr.append(SPACE + OR + SPACE);
-                        }
+                    if(values.length == 1){
+                    	 qStr.append(getFuzzyStr(name, values[0], fuzzy));
+                    }else{
+                    	 qStr.append(LEFT_PARENTHESIS);
+                         for(int j = 0; j < values.length; j++) {
+                             qStr.append(getFuzzyStr(name, values[j], fuzzy));
+                             if(j < values.length - 1) {
+                                 qStr.append(SPACE + OR + SPACE);
+                             }
+                         }
+                         qStr.append(RIGHT_PARENTHESIS);
                     }
-                    qStr.append(RIGHT_PARENTHESIS);
                 }
                 if(i < q.size() - 1) {
                     qStr.append(SPACE + (condition.isOr() ? OR : AND) + SPACE);
