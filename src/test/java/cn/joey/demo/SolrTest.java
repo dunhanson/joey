@@ -1,36 +1,22 @@
 package cn.joey.demo;
 
-import org.json.JSONObject;
-
-import cn.joey.entity.Document;
-import cn.joey.solr.core.Joey;
+import cn.joey.entity.BaseEntity;
+import cn.joey.utils.SolrUtils;
 
 public class SolrTest {
 	public static void main(String[] args) {
-		upadteIndexByHttp();
+		BaseEntity entity = new BaseEntity();
+		String baseUrl = "http://47.99.61.86:8983/solr/document";
+	    entity.setBaseSolrUrl(baseUrl);
+	    entity.setEntity("document");
+	    entity.setCore("document");
+	    entity.setPageNo(4294);
+	    entity.setPageSize(10000);
+	    entity.setTotal(42942716);
+	    entity.setCommand("full-import");
+	    SolrUtils.createIndex(entity);
+	    //System.out.println(SolrUtils.getNumFound(baseUrl));
+	    System.out.println("finish...");
 	}
-	
-    public static void upadteIndexByHttp() {
-        try {
-            //JSONObject json = null;
-            String status = null;
-            //int i = 0;
-            Joey.deltaImport(Document.class);
-            long time = System.currentTimeMillis();
-            String result = "";
-            do {
-                //查询solr状态
-                result = Joey.statusImport(Document.class, time);
-                //获取status
-                status = new JSONObject(result).getString("status");
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            } while (status.equals("busy"));
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
+
 }
