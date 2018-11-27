@@ -485,7 +485,7 @@ public class Joey<T> {
             }
             Class<?> clazz = field.getType();
             if (clazz == String.class && value.getClass() == ArrayList.class) {
-                field.set(entity, ((List)value).get(0));
+                field.set(entity, ((List<?>)value).get(0));
             } else if(clazz == String.class) {
                 field.set(entity, String.valueOf(value));
             } else if (clazz == Character.class || clazz == char.class) {
