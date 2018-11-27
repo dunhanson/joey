@@ -1,9 +1,17 @@
 package cn.joey.solr.core;
 
-import cn.joey.solr.annotation.Collection;
-import cn.joey.solr.annotation.Column;
-import cn.joey.utils.BeanUtils;
-import cn.joey.utils.HttpUtils;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.response.QueryResponse;
@@ -13,12 +21,11 @@ import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.lang.reflect.Field;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+
+import cn.joey.solr.annotation.Collection;
+import cn.joey.solr.annotation.Column;
+import cn.joey.utils.BeanUtils;
+import cn.joey.utils.HttpUtils;
 
 /**
  * Solr通用查询对象
@@ -132,6 +139,12 @@ public class Joey<T> {
     	if(pagination == null) pagination = new Pagination(1, 30);
         return getResult(clazz, new Item(q, fq, sort, pagination), getBasic(clazz));
     }
+    
+    public static <T> List<T> search(Class<T> clazz, List<Condition> q, List<Condition> fq, String fqStr,
+            List<Sort> sort, Pagination pagination) {
+        	if(pagination == null) pagination = new Pagination(1, 30);
+            return getResult(clazz, new Item(q, fq,fqStr, sort, pagination), getBasic(clazz));
+    }
 
     public static <T> List<T> search(Class<T> clazz, List<Condition> condition, boolean isQ,
         List<Sort> sort, Pagination pagination) {
@@ -165,11 +178,17 @@ public class Joey<T> {
      * @return
      */
     private static <T> List<T> getResult(Class<T> clazz, Item item, Basic info) {
+    	String q = getQStr(item.getQ());
+    	String fq = getFQStr(item.getFq());
+    	if(StringUtils.isEmpty(fq) && !StringUtils.isEmpty(item.getFqStr())){ 
+    		fq =item.getFqStr();
+    	}
+    	String sort = getSortStr(item.getSort());
         //设置参数
         SolrQuery query = new SolrQuery();
-        query.set("q", getQStr(item.getQ()));
-        query.set("fq", getFQStr(item.getFq()));
-        query.set("sort", getSortStr(item.getSort()));
+        query.set("q", q);
+        query.set("fq", fq);
+        query.set("sort",sort);
         query.setStart(item.getPagination().getStartNum());
         query.setRows(item.getPagination().getPageSize());
         setParam(query, item.getParam());
@@ -189,9 +208,9 @@ public class Joey<T> {
         }
         if(info.isShowTime()) {
         	logger.info("---------- Joey Start ----------");
-            logger.info("Q:" + getQStr(item.getQ()));
-            logger.info("FQ:" + getFQStr(item.getFq()));
-            logger.info("Sort:" + getSortStr(item.getSort()));
+            logger.info("Q:" + q);
+            logger.info("FQ:" + fq);
+            logger.info("Sort:" + sort);
             logger.info("QTime:" + response.getQTime() + "ms");
             logger.info("ElapsedTime:" + response.getElapsedTime() + "ms");
             logger.info("---------- Joey End ----------");
