@@ -3,12 +3,7 @@ package cn.joey.solr.core;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -489,7 +484,9 @@ public class Joey<T> {
                 return;
             }
             Class<?> clazz = field.getType();
-            if(clazz == String.class) {
+            if (value.getClass() == ArrayList.class) {
+                field.set(entity, ((List)value).get(0));
+            } else if(clazz == String.class) {
                 field.set(entity, String.valueOf(value));
             } else if (clazz == Character.class || clazz == char.class) {
                 field.set(entity, (char)value);
