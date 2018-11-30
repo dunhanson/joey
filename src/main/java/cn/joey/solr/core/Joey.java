@@ -3,7 +3,12 @@ package cn.joey.solr.core;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -736,7 +741,9 @@ public class Joey<T> {
     public static <T> void deleteIndex(Class<T> clazz, String id) {
     	try {
         	Basic info = getBasic(clazz);
-			Store.getInstance().getSolrClient(info).deleteById(id);
+        	SolrClient client = Store.getInstance().getSolrClient(info);
+        	client.deleteById(id);
+        	client.commit();
 		} catch (Exception e) {
 			logger.error(e.getMessage());
 			throw new RuntimeException(e);
@@ -750,8 +757,10 @@ public class Joey<T> {
      */
     public static <T> void deleteIndex(Class<T> clazz, List<String> ids) {
     	try {
-        	Basic info = getBasic(clazz);
-			Store.getInstance().getSolrClient(info).deleteById(ids);
+    		Basic info = getBasic(clazz);
+        	SolrClient client = Store.getInstance().getSolrClient(info);
+        	client.deleteById(ids);
+        	client.commit();
 		} catch (Exception e) {
 			logger.error(e.getMessage());
 			throw new RuntimeException(e);
