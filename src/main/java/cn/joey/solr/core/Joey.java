@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
 
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrQuery;
+import org.apache.solr.client.solrj.SolrRequest.METHOD;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
@@ -197,7 +198,7 @@ public class Joey<T> {
         //获取SolrClient进行查询
         QueryResponse response = null;
         try {
-            response = Store.getInstance().getSolrClient(info).query(query);
+            response = Store.getInstance().getSolrClient(info).query(query, METHOD.POST);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
