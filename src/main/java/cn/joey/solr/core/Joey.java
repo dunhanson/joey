@@ -205,6 +205,7 @@ public class Joey<T> {
         try {
             response = Store.getInstance().getSolrClient(info).query(query, METHOD.POST);
         } catch (Exception e) {
+        	e.printStackTrace();
             throw new RuntimeException(e);
         }
         if(info.isShowTime()) {
@@ -472,6 +473,7 @@ public class Joey<T> {
                 setValue(field, value, entity);
             }
         } catch (Exception e) {
+        	e.printStackTrace();
         	logger.error(e.getMessage());
             throw new RuntimeException(e);
         }
@@ -516,6 +518,7 @@ public class Joey<T> {
                 field.set(entity, value);
             }
         } catch (Exception e) {
+        	e.printStackTrace();
         	logger.error(e.getMessage());
             throw new RuntimeException(e);
         }
@@ -586,6 +589,7 @@ public class Joey<T> {
                 properties.load(new InputStreamReader(in, "UTF-8"));
             }
         } catch (Exception e) {
+        	e.printStackTrace();
         	logger.error(e.getMessage());
             throw new RuntimeException(e);
         }
@@ -664,6 +668,7 @@ public class Joey<T> {
         	baseSolrUrl = baseSolrUrl.replaceAll("TIME", String.valueOf(time));
             return HttpUtils.httpPost(baseSolrUrl, mapParam);
         } catch (Exception e) {
+        	e.printStackTrace();
         	logger.error(e.getMessage());
             throw new RuntimeException(e);
         }
@@ -693,6 +698,7 @@ public class Joey<T> {
             String entity = info.getDataimportEntity();
             return dataImport(info.getBaseSolrUrl(), new DataImportParam(command, core, entity), param);
         } catch (Exception e) {
+        	e.printStackTrace();
         	logger.error(e.getMessage());
             throw new RuntimeException(e);
         }
@@ -720,6 +726,7 @@ public class Joey<T> {
             String entity = info.getDataimportEntity();
             return dataImport(info.getBaseSolrUrl(), new DataImportParam(command, core, entity), param);
         } catch (Exception e) {
+        	e.printStackTrace();
         	logger.error(e.getMessage());
             throw new RuntimeException(e);
         }
@@ -745,6 +752,7 @@ public class Joey<T> {
         	client.deleteById(id);
         	client.commit();
 		} catch (Exception e) {
+			e.printStackTrace();
 			logger.error(e.getMessage());
 			throw new RuntimeException(e);
 		}
@@ -762,6 +770,7 @@ public class Joey<T> {
         	client.deleteById(ids);
         	client.commit();
 		} catch (Exception e) {
+			e.printStackTrace();
 			logger.error(e.getMessage());
 			throw new RuntimeException(e);
 		}
@@ -778,6 +787,7 @@ public class Joey<T> {
 			client.add(document);
 			client.commit();
 		} catch (Exception e) {
+			e.printStackTrace();
 			logger.error(e.getMessage());
 			throw new RuntimeException(e);
 		}
@@ -794,6 +804,7 @@ public class Joey<T> {
 			client.add(documents);
 			client.commit();
 		} catch (Exception e) {
+			e.printStackTrace();
 			logger.error(e.getMessage());
 			throw new RuntimeException(e);
 		}
