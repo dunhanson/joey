@@ -67,7 +67,7 @@ public class Joey<T> {
     private static final String HIGHTLIGHT_SIMPLEPRE = "highlightSimplePre";
     private static final String HIGHLIGHT_SIMPLEPOST = "highlightSimplePost";
     private static Logger logger = LoggerFactory.getLogger(Joey.class);
-    private static Properties properties = null;
+    private static  volatile  Properties properties = null;
 
     private Joey() {
 
@@ -238,7 +238,9 @@ public class Joey<T> {
      * @param clazz
      */
     public static <T> Basic getBasic(Class<T> clazz) {
-        loadConfiguration();
+    	if(null == properties){
+    		loadConfiguration();
+    	}
         Basic solrInfo = new Basic();
         if(properties == null) {//注解方式
             Collection collection = clazz.getAnnotation(Collection.class);
