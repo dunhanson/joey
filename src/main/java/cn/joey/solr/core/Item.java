@@ -6,6 +6,7 @@ import java.util.Map;
 public class Item {
     private List<Condition> q;
     private List<Condition> fq;
+    private String fqStr;
     private List<Sort> sort;
     private Map<String, String> param;
     private Pagination pagination;
@@ -16,6 +17,14 @@ public class Item {
 
     public Item(List<Condition> q, List<Condition> fq, List<Sort> sort, Pagination pagination) {
         this.q = q;
+        this.fq = fq;
+        this.sort = sort;
+        this.pagination = pagination;
+    }
+    
+    public Item(List<Condition> q,List<Condition> fq, String fqStr, List<Sort> sort, Pagination pagination) {
+        this.q = q;
+        this.fqStr = fqStr;
         this.fq = fq;
         this.sort = sort;
         this.pagination = pagination;
@@ -59,6 +68,14 @@ public class Item {
 
 	public void setParam(Map<String, String> param) {
 		this.param = param;
+	}
+	
+	public String getFqStr() {
+		return fqStr;
+	}
+
+	public void setFqStr(String fqStr) {
+		this.fqStr = fqStr;
 	}
 
 	@Override

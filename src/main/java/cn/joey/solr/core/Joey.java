@@ -1,11 +1,20 @@
 package cn.joey.solr.core;
 
-import cn.joey.solr.annotation.Collection;
-import cn.joey.solr.annotation.Column;
-import cn.joey.utils.HttpUtils;
-import com.google.common.base.Joiner;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrQuery;
+import org.apache.solr.client.solrj.SolrRequest.METHOD;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
@@ -13,13 +22,11 @@ import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.lang.reflect.Field;
-import java.net.URLEncoder;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+
+import cn.joey.solr.annotation.Collection;
+import cn.joey.solr.annotation.Column;
+import cn.joey.utils.BeanUtils;
+import cn.joey.utils.HttpUtils;
 
 /**
  * Solr通用查询对象
@@ -76,6 +83,7 @@ public class Joey<T> {
     }
 
     public static <T> List<T> search(Class<T> clazz, Pagination pagination) {
+    	if(pagination == null) pagination = new Pagination(1, 30);
         Item item = new Item(null, null, null, pagination);
         return getResult(clazz, item, getBasic(clazz));
     }
@@ -95,6 +103,7 @@ public class Joey<T> {
     public static <T> List<T> search(Class<T> clazz, List<Condition> condition, boolean isQ, Pagination pagination) {
         List<Condition> q = null;
         List<Condition> fq = null;
+        if(pagination == null) pagination = new Pagination(1, 30);
         if(isQ) {
             q = condition;
         } else {
@@ -128,11 +137,19 @@ public class Joey<T> {
 
     public static <T> List<T> search(Class<T> clazz, List<Condition> q, List<Condition> fq,
         List<Sort> sort, Pagination pagination) {
+    	if(pagination == null) pagination = new Pagination(1, 30);
         return getResult(clazz, new Item(q, fq, sort, pagination), getBasic(clazz));
+    }
+    
+    public static <T> List<T> search(Class<T> clazz, List<Condition> q, List<Condition> fq, String fqStr,
+            List<Sort> sort, Pagination pagination) {
+        	if(pagination == null) pagination = new Pagination(1, 30);
+            return getResult(clazz, new Item(q, fq,fqStr, sort, pagination), getBasic(clazz));
     }
 
     public static <T> List<T> search(Class<T> clazz, List<Condition> condition, boolean isQ,
         List<Sort> sort, Pagination pagination) {
+    	if(pagination == null) pagination = new Pagination(1, 30);
         List<Condition> q = null;
         List<Condition> fq = null;
         if(isQ) {
@@ -142,7 +159,17 @@ public class Joey<T> {
         }
         return getResult(clazz, new Item(q, fq, sort, pagination), getBasic(clazz));
     }
+    
+    
+    public static String search(String completeUrl) {
+    	return HttpUtils.httpGet(completeUrl);
+    }
 
+    public static String search(String baseSolrUrl, Map<String, Object> param) {
+    	String url = baseSolrUrl + "/select";
+    	return HttpUtils.httpGet(url, param);
+    }
+    
     /**
      * 获取查询结果
      * @param clazz
@@ -152,11 +179,17 @@ public class Joey<T> {
      * @return
      */
     private static <T> List<T> getResult(Class<T> clazz, Item item, Basic info) {
+    	String q = getQStr(item.getQ());
+    	String fq = getFQStr(item.getFq());
+    	if(StringUtils.isEmpty(fq) && !StringUtils.isEmpty(item.getFqStr())){ 
+    		fq =item.getFqStr();
+    	}
+    	String sort = getSortStr(item.getSort());
         //设置参数
         SolrQuery query = new SolrQuery();
-        query.set("q", getQStr(item.getQ()));
-        query.set("fq", getFQStr(item.getFq()));
-        query.set("sort", getSortStr(item.getSort()));
+        query.set("q", q);
+        query.set("fq", fq);
+        query.set("sort",sort);
         query.setStart(item.getPagination().getStartNum());
         query.setRows(item.getPagination().getPageSize());
         setParam(query, item.getParam());
@@ -170,16 +203,17 @@ public class Joey<T> {
         //获取SolrClient进行查询
         QueryResponse response = null;
         try {
-            response = Store.getInstance().getSolrClient(info).query(query);
+            response = Store.getInstance().getSolrClient(info).query(query, METHOD.POST);
         } catch (Exception e) {
+        	e.printStackTrace();
             throw new RuntimeException(e);
         }
         if(info.isShowTime()) {
         	logger.info("---------- Joey Start ----------");
-            logger.info("Q:" + getQStr(item.getQ()));
-            logger.info("FQ:" + getFQStr(item.getFq()));
-            logger.info("Sort:" + getSortStr(item.getSort()));
-            logger.info("QTime():" + response.getQTime() + "ms");
+            logger.info("Q:" + q);
+            logger.info("FQ:" + fq);
+            logger.info("Sort:" + sort);
+            logger.info("QTime:" + response.getQTime() + "ms");
             logger.info("ElapsedTime:" + response.getElapsedTime() + "ms");
             logger.info("---------- Joey End ----------");
         }
@@ -223,7 +257,7 @@ public class Joey<T> {
             solrInfo.setShowTime(collection.showTime());
         } else {//配置方式
             String collection = getCollection(clazz, properties);
-            solrInfo.setCollection(getCollection(clazz, properties));
+            solrInfo.setCollection(collection);
             solrInfo.setCluster(getProperty(collection, CLUSTER, "false").equals(TRUE));
             solrInfo.setBaseSolrUrl(getProperty(collection, BASESOLR_URL));
             solrInfo.setZkHost(getProperty(collection, ZKHOST));
@@ -275,14 +309,18 @@ public class Joey<T> {
                 	return values[0];
                 }
                 if(values != null && values.length > 0) {
-                    qStr.append(LEFT_PARENTHESIS);
-                    for(int j = 0; j < values.length; j++) {
-                        qStr.append(getFuzzyStr(name, values[j], fuzzy));
-                        if(j < values.length - 1) {
-                            qStr.append(SPACE + OR + SPACE);
-                        }
+                    if(values.length == 1){
+                    	 qStr.append(getFuzzyStr(name, values[0], fuzzy));
+                    }else{
+                    	 qStr.append(LEFT_PARENTHESIS);
+                         for(int j = 0; j < values.length; j++) {
+                             qStr.append(getFuzzyStr(name, values[j], fuzzy));
+                             if(j < values.length - 1) {
+                                 qStr.append(SPACE + OR + SPACE);
+                             }
+                         }
+                         qStr.append(RIGHT_PARENTHESIS);
                     }
-                    qStr.append(RIGHT_PARENTHESIS);
                 }
                 if(i < q.size() - 1) {
                     qStr.append(SPACE + (condition.isOr() ? OR : AND) + SPACE);
@@ -383,7 +421,7 @@ public class Joey<T> {
      */
     private static String getFuzzyStr(String name, String value, boolean fuzzy) {
         if(fuzzy && !StringUtils.isEmpty(value)) {
-            //value = STAR + value + STAR;
+            value = STAR + value + STAR;
             return name + COLON + value;
         }
         return name + COLON + QUOTE + value + QUOTE;
@@ -435,7 +473,8 @@ public class Joey<T> {
                 setValue(field, value, entity);
             }
         } catch (Exception e) {
-        	logger.error(e.getLocalizedMessage());
+        	e.printStackTrace();
+        	logger.error(e.getMessage());
             throw new RuntimeException(e);
         }
         return entity;
@@ -453,7 +492,9 @@ public class Joey<T> {
                 return;
             }
             Class<?> clazz = field.getType();
-            if(clazz == String.class) {
+            if (clazz == String.class && value.getClass() == ArrayList.class) {
+                field.set(entity, ((List<?>)value).get(0));
+            } else if(clazz == String.class) {
                 field.set(entity, String.valueOf(value));
             } else if (clazz == Character.class || clazz == char.class) {
                 field.set(entity, (char)value);
@@ -477,7 +518,8 @@ public class Joey<T> {
                 field.set(entity, value);
             }
         } catch (Exception e) {
-        	logger.error(e.getLocalizedMessage());
+        	e.printStackTrace();
+        	logger.error(e.getMessage());
             throw new RuntimeException(e);
         }
     }
@@ -534,29 +576,7 @@ public class Joey<T> {
         }
         return "id";
     }
-
-    /**
-     * Map转URL参数
-     * @param map
-     * @param isURLEncoder
-     * @return
-     */
-    private static String mapToFormData(Map<String, Object> map, boolean isURLEncoder) {
-        String formData = "";
-        try {
-            if (map != null && map.size() > 0) {
-                formData = Joiner.on("&").withKeyValueSeparator("=").join(map);
-                if (isURLEncoder) {
-                    formData = URLEncoder.encode(formData, "UTF-8");
-                }
-            }
-        } catch (Exception e) {
-        	logger.error(e.getLocalizedMessage());
-            throw new RuntimeException(e);
-        }
-        return formData;
-    }
-
+    
     /**
      * 读取配置文件
      * @return
@@ -569,7 +589,8 @@ public class Joey<T> {
                 properties.load(new InputStreamReader(in, "UTF-8"));
             }
         } catch (Exception e) {
-        	logger.error(e.getLocalizedMessage());
+        	e.printStackTrace();
+        	logger.error(e.getMessage());
             throw new RuntimeException(e);
         }
     }
@@ -598,42 +619,71 @@ public class Joey<T> {
         key = collection + DOT + key;
         return properties.getProperty(key, defaultValue);
     }
-
-
+    
     /**
-     * 更新索引
-     * @param baseSolrUrl solr地址
-     * @param entity 实体名
-     * @param importType 导入类型
+     * 查看创建索引状态
+     * @param baseSolrUrl
+     * @param times
      * @return
      */
-    private static String dataImport(String baseSolrUrl, String entity, String importType, Map<String, Object> param) {
+    public static <T> String statusImport(String baseSolrUrl, Long times) {
+        //封装参数
+    	Map<String, Object> param = new HashMap<>();
+    	param.put("_", times == null ? System.currentTimeMillis() : times);
+        param.put("command", "status");
+        param.put("indent", "on");
+        param.put("wt", "json");
+        //执行请求并返回结果
+        return HttpUtils.httpGet(baseSolrUrl + "/dataimport", param);
+    }
+    
+    /**
+     * 查看创建索引状态
+     * @param clazz
+     * @param time
+     * @return
+     */
+    public static <T> String statusImport(Class<T> clazz, Long time) {
+    	return statusImport(getBasic(clazz).getBaseSolrUrl(), time);
+    }    
+    
+    /**
+     * 数据导入
+     * @param baseSolrUrl
+     * @param param
+     * @param extra
+     * @return
+     */
+    public static String dataImport(String baseSolrUrl, DataImportParam param, Map<String, Object> extra) {
         try {
-            param.put("entity", entity);
-            param.put("command", importType);
-            //执行更新索引并返回结果
-            return HttpUtils.httpPost(baseSolrUrl + "/dataimport", mapToFormData(param, false));
+        	//防止空指针异常
+        	extra = extra == null ? new HashMap<>() : extra;
+        	//转换map集合
+        	Map<String, Object> mapParam = BeanUtils.toMap(param);
+        	//追加额外参数
+        	mapParam.putAll(extra);
+        	//执行请求
+        	long time = System.currentTimeMillis();
+        	baseSolrUrl += "/dataimport?_=TIME&indent=on&wt=json";
+        	baseSolrUrl = baseSolrUrl.replaceAll("TIME", String.valueOf(time));
+            return HttpUtils.httpPost(baseSolrUrl, mapParam);
         } catch (Exception e) {
-        	logger.error(e.getLocalizedMessage());
+        	e.printStackTrace();
+        	logger.error(e.getMessage());
             throw new RuntimeException(e);
         }
     }
-
-
+    
     /**
-     * 全量更新索引
+     * 数据导入
+     * @param baseSolrUrl
+     * @param param
      * @return
      */
-    public static <T> String fullImport(Class<T> clazz) {
-        try {
-            Basic info = getBasic(clazz);
-            return dataImport(info.getBaseSolrUrl(), info.getDataimportEntity(), FULL_IMPORT, new HashMap<>());
-        } catch (Exception e) {
-        	logger.error(e.getLocalizedMessage());
-            throw new RuntimeException(e);
-        }
+    public static String dataImport(String baseSolrUrl, DataImportParam param) {
+        return dataImport(baseSolrUrl, param, null);
     }
-
+    
     /**
      * 全量更新索引
      * @param param 自定义参数
@@ -642,13 +692,24 @@ public class Joey<T> {
      */
     public static <T> String fullImport(Class<T> clazz, Map<String, Object> param) {
         try {
-            //执行更新索引并返回结果
             Basic info = getBasic(clazz);
-            return dataImport(info.getBaseSolrUrl(), info.getDataimportEntity(), FULL_IMPORT, param);
+            String command = FULL_IMPORT;
+            String core = info.getCollection();
+            String entity = info.getDataimportEntity();
+            return dataImport(info.getBaseSolrUrl(), new DataImportParam(command, core, entity), param);
         } catch (Exception e) {
-        	logger.error(e.getLocalizedMessage());
+        	e.printStackTrace();
+        	logger.error(e.getMessage());
             throw new RuntimeException(e);
         }
+    }
+    
+    /**
+     * 全量更新索引
+     * @return
+     */
+    public static <T> String fullImport(Class<T> clazz) {
+        return fullImport(clazz, null);
     }
 
     /**
@@ -659,11 +720,14 @@ public class Joey<T> {
      */
     public static <T> String deltaImport(Class<T> clazz, Map<String, Object> param) {
         try {
-            //执行更新索引并返回结果
             Basic info = getBasic(clazz);
-            return dataImport(info.getBaseSolrUrl(), info.getDataimportEntity(), DELTA_IMPORT, param);
+            String command = DELTA_IMPORT;
+            String core = info.getCollection();
+            String entity = info.getDataimportEntity();
+            return dataImport(info.getBaseSolrUrl(), new DataImportParam(command, core, entity), param);
         } catch (Exception e) {
-        	logger.error(e.getLocalizedMessage());
+        	e.printStackTrace();
+        	logger.error(e.getMessage());
             throw new RuntimeException(e);
         }
     }
@@ -673,14 +737,7 @@ public class Joey<T> {
      * @return
      */
     public static <T> String deltaImport(Class<T> clazz) {
-        try {
-            //执行更新索引并返回结果
-            Basic info = getBasic(clazz);
-            return dataImport(info.getBaseSolrUrl(), info.getDataimportEntity(), DELTA_IMPORT, new HashMap<>());
-        } catch (Exception e) {
-        	logger.error(e.getLocalizedMessage());
-            throw new RuntimeException(e);
-        }
+        return deltaImport(clazz, null);
     }
     
     /**
@@ -691,9 +748,12 @@ public class Joey<T> {
     public static <T> void deleteIndex(Class<T> clazz, String id) {
     	try {
         	Basic info = getBasic(clazz);
-			Store.getInstance().getSolrClient(info).deleteById(id);
+        	SolrClient client = Store.getInstance().getSolrClient(info);
+        	client.deleteById(id);
+        	client.commit();
 		} catch (Exception e) {
-			logger.error(e.getLocalizedMessage());
+			e.printStackTrace();
+			logger.error(e.getMessage());
 			throw new RuntimeException(e);
 		}
     }
@@ -705,10 +765,13 @@ public class Joey<T> {
      */
     public static <T> void deleteIndex(Class<T> clazz, List<String> ids) {
     	try {
-        	Basic info = getBasic(clazz);
-			Store.getInstance().getSolrClient(info).deleteById(ids);
+    		Basic info = getBasic(clazz);
+        	SolrClient client = Store.getInstance().getSolrClient(info);
+        	client.deleteById(ids);
+        	client.commit();
 		} catch (Exception e) {
-			logger.error(e.getLocalizedMessage());
+			e.printStackTrace();
+			logger.error(e.getMessage());
 			throw new RuntimeException(e);
 		}
     }
@@ -724,7 +787,8 @@ public class Joey<T> {
 			client.add(document);
 			client.commit();
 		} catch (Exception e) {
-			logger.error(e.getLocalizedMessage());
+			e.printStackTrace();
+			logger.error(e.getMessage());
 			throw new RuntimeException(e);
 		}
     }
@@ -740,9 +804,10 @@ public class Joey<T> {
 			client.add(documents);
 			client.commit();
 		} catch (Exception e) {
-			logger.error(e.getLocalizedMessage());
+			e.printStackTrace();
+			logger.error(e.getMessage());
 			throw new RuntimeException(e);
 		}
     }
-    
+
 }
