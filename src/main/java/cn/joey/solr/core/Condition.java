@@ -1,18 +1,21 @@
 package cn.joey.solr.core;
 
+import java.util.List;
+
 /**
  * 搜索条件
  * @author dunhanson
  * @since 2017-12-27
  */
 public class Condition {
-	private String name;        //字段名称
-	private String[] values;    //字段指
-	private boolean fuzzy;      //模糊查询
-	private boolean or;         //并且
-	private boolean range;		//范围查询
-	private boolean innerOr;    //多值并且
-	private boolean innerFuzzy; //多值模糊
+	private String name;                 //字段名称
+	private String[] values;             //字段指
+	private boolean fuzzy;               //模糊查询
+	private boolean or;                  //并且
+	private boolean range;		         //范围查询
+	private boolean innerOr;             //多值并且
+	private boolean innerFuzzy;          //多值模糊
+	private List<Condition> conditions;  //内部条件
 	//内部类，查询类型
 	public enum Type {
 		FUZZY, OR, RANGE, INNER_OR, INNER_FUZZY
@@ -118,4 +121,11 @@ public class Condition {
 		this.range = range;
 	}
 
+	public List<Condition> getConditions() {
+		return conditions;
+	}
+
+	public void setConditions(List<Condition> conditions) {
+		this.conditions = conditions;
+	}
 }
