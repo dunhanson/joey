@@ -332,51 +332,56 @@ public class Joey<T> {
      */
     private static String getFQStr(List<Condition> fq){
         StringBuffer fqStr = new StringBuffer();
+
+        //过滤空值
+        fq = fq.stream().filter(condition -> {
+            String[] values = condition.getValues();
+            List<Condition> conditions = condition.getConditions();
+            if((values == null && conditions == null) || values != null) {
+                return true;
+            }
+            return false;
+        }).collect(Collectors.toList());
+
         for(int i = 0; fq != null && i < fq.size(); i++) {
             //基本条件
             Condition condition = fq.get(i);
             String name = condition.getName();
             String[] values = condition.getValues();
+            boolean fuzzy = condition.isFuzzy();
+            boolean or = condition.isOr();
+            boolean innerFuzzy = condition.isInnerFuzzy();
+            boolean innerOr = condition.isInnerOr();
+            boolean isRange = condition.isRange();
             List<Condition> conditions = condition.getConditions();
 
-            //过滤空值
-            List<String> list = Arrays.asList(values)
-                    .stream()
-                    .filter(value->!StringUtils.isEmpty(value))
-                    .collect(Collectors.toList());
-
-            //空集合判断
-            if(!list.isEmpty()) {
-                boolean fuzzy = condition.isFuzzy();
-                boolean or = condition.isOr();
-                boolean innerFuzzy = condition.isInnerFuzzy();
-                boolean innerOr = condition.isInnerOr();
-                boolean isRange = condition.isRange();
+            if(conditions != null) {
+                fqStr.append(LEFT_PARENTHESIS);
+                fqStr.append(getInnerStr(name, values, innerFuzzy, innerOr));
+                String conditionsStr = getConditionsStr(conditions);
+                if(values != null && values.length > 0 && !StringUtils.isEmpty(conditionsStr) && fqStr.length() > 0) {
+                    fqStr.append(SPACE + OR + SPACE);
+                }
+                fqStr.append(conditionsStr);
+                fqStr.append(RIGHT_PARENTHESIS);
+            } else {
                 fqStr.append(LEFT_PARENTHESIS);
                 if(values.length == 1) {//精准查询
                     fqStr.append(getFuzzyStr(name, values[0], fuzzy));
                 } else if(values.length == 2 && isRange) {
                     fqStr.append(getRangeStr(name, values));
-                } else {
+                } else if(values != null && values.length > 0) {
                     fqStr.append(getInnerStr(name, values, innerFuzzy, innerOr));
                 }
-
-                //conditions
-                if(conditions != null && !conditions.isEmpty()) {
-                    String conditionsStr = getConditionsStr(conditions);
-                    if(!StringUtils.isEmpty(conditionsStr)) {
-                        fqStr.append(SPACE + AND + SPACE);
-                        fqStr.append(conditionsStr);
-                    }
-                }
-
                 //末尾）
                 fqStr.append(RIGHT_PARENTHESIS);
-                //非末尾and/or
-                if(i < fq.size() - 1) {
-                    fqStr.append(SPACE + (or ? OR : AND) + SPACE);
-                }
             }
+
+            //非末尾and/or
+            if(i < fq.size() - 1) {
+                fqStr.append(SPACE + (or ? OR : AND) + SPACE);
+            }
+
         }
         return fqStr.toString();
     }
@@ -388,38 +393,26 @@ public class Joey<T> {
     private static String getConditionsStr(List<Condition> conditions) {
         StringBuilder str = new StringBuilder();
         for(int i = 0; conditions != null && i < conditions.size(); i++) {
+            str.append(LEFT_PARENTHESIS);
             Condition condition = conditions.get(i);
             String name = condition.getName();
             String[] values = condition.getValues();
+            boolean innerFuzzy = condition.isInnerFuzzy();
+            boolean innerOr = condition.isInnerOr();
+            str.append(getInnerStr(name, values, innerFuzzy, innerOr));
 
-            //过滤空值
-            List<String> list = Arrays.asList(values)
-                    .stream()
-                    .filter(value->!StringUtils.isEmpty(value))
-                    .collect(Collectors.toList());
-
-            //空集合判断
+            List<Condition> list = condition.getConditions();
             if(!list.isEmpty()) {
-                boolean fuzzy = condition.isFuzzy();
-                boolean or = condition.isOr();
-                boolean innerFuzzy = condition.isInnerFuzzy();
-                boolean innerOr = condition.isInnerOr();
-                boolean isRange = condition.isRange();
+                str.append(SPACE);
+                str.append(AND);
+                str.append(SPACE);
                 str.append(LEFT_PARENTHESIS);
-                if (values.length == 1) {//精准查询
-                    str.append(getFuzzyStr(name, values[0], fuzzy));
-                } else if (values.length == 2 && isRange) {
-                    str.append(getRangeStr(name, values));
-                } else {
-                    str.append(getInnerStr(name, values, innerFuzzy, innerOr));
-                }
-                //末尾）
+                list.forEach(obj->{
+                    str.append(getInnerStr(obj.getName(), obj.getValues(), obj.isInnerFuzzy(), obj.isInnerOr()));
+                });
                 str.append(RIGHT_PARENTHESIS);
-                //非末尾and/or
-                if (i < conditions.size() - 1) {
-                    str.append(SPACE + (or ? OR : AND) + SPACE);
-                }
             }
+            str.append(RIGHT_PARENTHESIS);
         }
         return str.toString();
     }
