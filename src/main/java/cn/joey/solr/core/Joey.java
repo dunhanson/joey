@@ -358,7 +358,7 @@ public class Joey<T> {
             if(conditions != null) {
                 fqStr.append(LEFT_PARENTHESIS);
                 fqStr.append(getInnerStr(name, values, innerFuzzy, innerOr));
-                String conditionsStr = getConditionsStr(conditions);
+                String conditionsStr = getConditionsStr(conditions, innerOr);
                 if(values != null && values.length > 0 && !StringUtils.isEmpty(conditionsStr) && fqStr.length() > 0) {
                     fqStr.append(SPACE + OR + SPACE);
                 }
@@ -390,7 +390,7 @@ public class Joey<T> {
      * 获取Conditions查询字符串
      * @return
      */
-    private static String getConditionsStr(List<Condition> conditions) {
+    private static String getConditionsStr(List<Condition> conditions, boolean isOr) {
         StringBuilder str = new StringBuilder();
         for(int i = 0; conditions != null && i < conditions.size(); i++) {
             str.append(LEFT_PARENTHESIS);
@@ -400,7 +400,6 @@ public class Joey<T> {
             boolean innerFuzzy = condition.isInnerFuzzy();
             boolean innerOr = condition.isInnerOr();
             str.append(getInnerStr(name, values, innerFuzzy, innerOr));
-
             List<Condition> list = condition.getConditions();
             if(!list.isEmpty()) {
                 str.append(SPACE);
@@ -413,6 +412,11 @@ public class Joey<T> {
                 str.append(RIGHT_PARENTHESIS);
             }
             str.append(RIGHT_PARENTHESIS);
+
+            //非末尾and/or
+            if(i < conditions.size() - 1) {
+                str.append(SPACE + (isOr ? OR : AND) + SPACE);
+            }
         }
         return str.toString();
     }
