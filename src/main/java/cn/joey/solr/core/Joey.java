@@ -7,6 +7,8 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import cn.joey.utils.CommonUtils;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrRequest.METHOD;
@@ -45,7 +47,6 @@ public class Joey<T> {
     private static final String RIGHT_BRACKET = "]";
     private static final String FULL_IMPORT = "full-import";
     private static final String DELTA_IMPORT = "delta-import";
-    private static final String CONFIG_FILENAME = "joey.properties";
     private static final String COLLECTION = "collection";
     private static final String CLASSPATH = "classpath";
     private static final String BASESOLR_URL = "baseSolrUrl";
@@ -332,6 +333,10 @@ public class Joey<T> {
      */
     private static String getFQStr(List<Condition> fq){
         StringBuffer fqStr = new StringBuffer();
+
+        if(fq == null || fq.isEmpty()) {
+            return fqStr.toString();
+        }
 
         //过滤空值
         fq = fq.stream().filter(condition -> {
@@ -646,7 +651,8 @@ public class Joey<T> {
      */
     private static void loadConfiguration(){
         ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
-        try(InputStream in = contextClassLoader.getResourceAsStream(CONFIG_FILENAME)) {
+        String configName = CommonUtils.getConfigFileName();
+        try(InputStream in = contextClassLoader.getResourceAsStream(configName)) {
             if(in != null) {
                 properties = new Properties();
                 properties.load(new InputStreamReader(in, "UTF-8"));
