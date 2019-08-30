@@ -185,6 +185,7 @@ public class Joey<T> {
         query.set("q", q);
         query.set("fq", fq);
         query.set("sort",sort);
+        query.set("shards.tolerant", "true");
         query.setStart(item.getPagination().getStartNum());
         query.setRows(item.getPagination().getPageSize());
         setParam(query, item.getParam());
