@@ -62,7 +62,7 @@ public class Joey<T> {
     private static final String HIGHTLIGHT_SIMPLEPRE = "highlightSimplePre";
     private static final String HIGHLIGHT_SIMPLEPOST = "highlightSimplePost";
     private static Logger logger = LoggerFactory.getLogger(Joey.class);
-    private static  volatile  Properties properties = null;
+    private static volatile Properties properties = null;
 
     private Joey() {
 
@@ -175,6 +175,8 @@ public class Joey<T> {
      */
     private static <T> List<T> getResult(Class<T> clazz, Item item, Basic info) {
     	String q = getQStr(item.getQ());
+    	//移除引号
+    	q = requireQuote(item.getParam()) ? q : q.replace(QUOTE, "");
     	String fq = getFQStr(item.getFq());
     	if(StringUtils.isEmpty(fq) && !StringUtils.isEmpty(item.getFqStr())){ 
     		fq =item.getFqStr();
@@ -209,6 +211,12 @@ public class Joey<T> {
             logger.info("Q:" + q);
             logger.info("FQ:" + fq);
             logger.info("Sort:" + sort);
+            Map<String, String> param = item.getParam();
+            if(param != null && param.size() > 0) {
+                param.keySet().forEach(key->{
+                    logger.info(key + ":" + param.get(key));
+                });
+            }
             logger.info("QTime:" + response.getQTime() + "ms");
             logger.info("ElapsedTime:" + response.getElapsedTime() + "ms");
             logger.info("---------- Joey End ----------");
@@ -878,6 +886,16 @@ public class Joey<T> {
 			logger.error(e.getMessage());
 			throw new RuntimeException(e);
 		}
+    }
+
+    /**
+     * 需要引号
+     * @param param
+     * @return
+     */
+    private static boolean requireQuote(Map<String, String> param) {
+        String key = "defType";
+        return param.containsKey(key) && "edismax".equals(param.get(key)) ? false : true;
     }
 
 }
