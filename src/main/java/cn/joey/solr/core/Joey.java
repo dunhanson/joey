@@ -174,9 +174,8 @@ public class Joey<T> {
      * @return
      */
     private static <T> List<T> getResult(Class<T> clazz, Item item, Basic info) {
+        boolean defaultQ = requireDefaultQ(item);
     	String q = getQStr(item.getQ());
-    	//移除引号
-    	q = requireQuote(item.getParam()) ? q : q.replace(QUOTE, "");
     	String fq = getFQStr(item.getFq());
     	if(StringUtils.isEmpty(fq) && !StringUtils.isEmpty(item.getFqStr())){ 
     		fq =item.getFqStr();
@@ -184,7 +183,9 @@ public class Joey<T> {
     	String sort = getSortStr(item.getSort());
         //设置参数
         SolrQuery query = new SolrQuery();
-        query.set("q", q);
+        if(defaultQ) {
+            query.set("q", q);
+        }
         query.set("fq", fq);
         query.set("sort",sort);
         query.set("shards.tolerant", "true");
@@ -192,7 +193,7 @@ public class Joey<T> {
         query.setRows(item.getPagination().getPageSize());
         setParam(query, item.getParam());
         //高亮设置
-        if(info.isHighlightEnable() && item.getParam() == null) {
+        if(info.isHighlightEnable()) {
             query.setHighlight(true);
             query.addHighlightField(info.getHighlightFieldName());
             query.setHighlightSimplePre(info.getHighlightSimplePre());
@@ -208,17 +209,19 @@ public class Joey<T> {
         }
         if(info.isShowTime()) {
         	logger.info("---------- Joey Start ----------");
-            logger.info("Q:" + q);
-            logger.info("FQ:" + fq);
-            logger.info("Sort:" + sort);
+            logger.info("q:" + (defaultQ ? q : item.getParam().get("q")));
+            logger.info("fq:" + fq);
+            logger.info("sort:" + sort);
             Map<String, String> param = item.getParam();
             if(param != null && param.size() > 0) {
                 param.keySet().forEach(key->{
-                    logger.info(key + ":" + param.get(key));
+                    if(!key.equals("q")) {
+                        logger.info(key + ":" + param.get(key));
+                    }
                 });
             }
-            logger.info("QTime:" + response.getQTime() + "ms");
-            logger.info("ElapsedTime:" + response.getElapsedTime() + "ms");
+            logger.info("q-time:" + response.getQTime() + "ms");
+            logger.info("elapsed-time:" + response.getElapsedTime() + "ms");
             logger.info("---------- Joey End ----------");
         }
         //返回实体对象集合
@@ -501,7 +504,7 @@ public class Joey<T> {
             value = STAR + value + STAR;
             return name + COLON + value;
         }
-        return name + COLON + QUOTE + value + QUOTE;
+        return StringUtils.isEmpty(name) ? value : name + COLON + QUOTE + value + QUOTE;
     }
 
     /**
@@ -894,8 +897,28 @@ public class Joey<T> {
      * @return
      */
     private static boolean requireQuote(Map<String, String> param) {
+        if(param == null || param.size() == 0) {
+            return true;
+        }
         String key = "defType";
         return param.containsKey(key) && "edismax".equals(param.get(key)) ? false : true;
+    }
+
+    /**
+     * 需要默认Q
+     * @param item
+     * @return
+     */
+    private static boolean requireDefaultQ(Item item) {
+        if(item == null) {
+            return true;
+        }
+        Map<String, String> param = item.getParam();
+        if(param == null || param.size() == 0) {
+            return true;
+        }
+        String key = "q";
+        return param.containsKey(key)? false : true;
     }
 
 }

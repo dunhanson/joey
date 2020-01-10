@@ -46,6 +46,12 @@
 		  <version>4.13</version>
 		  <scope>test</scope>
 	  </dependency>
+	  <dependency>
+		  <groupId>org.projectlombok</groupId>
+		  <artifactId>lombok</artifactId>
+		  <version>1.18.6</version>
+		  <scope>provided</scope>
+	  </dependency>
   </dependencies>
   <!-- 设置项目默认编译JDK版本 -->
   <build>
